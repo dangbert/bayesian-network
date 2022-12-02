@@ -6,6 +6,11 @@ import logging
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.abspath(os.path.dirname(TEST_DIR))
 
+# some files for testing
+DOG_FILE = os.path.join(ROOT_DIR, "testing/dog_problem.BIFXML")
+LEC1_FILE = os.path.join(ROOT_DIR, "testing/lecture_example.BIFXML")
+LEC2_FILE = os.path.join(ROOT_DIR, "testing/lecture_example2.BIFXML")
+
 
 def pytest_sessionstart(session):
     """runs before all tests start https://stackoverflow.com/a/35394239"""

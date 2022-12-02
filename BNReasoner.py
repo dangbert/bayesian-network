@@ -1,5 +1,6 @@
 from typing import Union
 from BayesNet import BayesNet
+from typing import MutableSet
 
 
 class BNReasoner:
@@ -29,7 +30,8 @@ class BNReasoner:
         """
         pass
 
-    def d_seperated(self, x, y):
+    def d_seperated(self, x: MutableSet[str], y: MutableSet[str], z: MutableSet[str]):
         """
         Checks whether all paths between nodes x and y are d-blocked.
         """
+        pass
