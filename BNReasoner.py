@@ -1,5 +1,6 @@
 from typing import Union, MutableSet
 from BayesNet import BayesNet
+import networkx as nx
 
 
 class BNReasoner:
@@ -32,9 +33,9 @@ class BNReasoner:
 
         # node pruning i.e. delete leaf nodes
         while True:
-            leaf_nodes = [node for node in nodes if self.bn.children(node) == []]
+            leaf_nodes = [node for node in nodes if self.bn.get_children(node) == []]
 
-            if leaf_nodes = []:
+            if leaf_nodes == []:
                 break
 
             for node in leaf_nodes:
@@ -47,7 +48,7 @@ class BNReasoner:
         for x, y in paths:
 
             # check whether x and y are not d-separated (i.e. there is a path)
-            if nx.has_path(nx.to_undirected(self.bn.structure), x_node, y_node):
+            if nx.has_path(nx.to_undirected(self.bn.structure), x, y):
                 return False
 
         return True
@@ -56,11 +57,10 @@ class BNReasoner:
         """
         Determine whether X is independent of Y given Z.
         """
-        if d_separated(X, Y, Z):
-            return True
+        return self.d_separated(X, Y, Z)
 
-
-    def network_pruning(self, Q: , e: ):
+    # TODO: define types for these params
+    def network_pruning(self, Q, e):
         """
         Given a set of query variables Q and evidence e, simplify the network
         structure.

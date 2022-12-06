@@ -3,3 +3,4 @@ networkx~=2.6.3
 pandas~=1.3.4
 pgmpy~=0.1.16
 pytest==7.2.0
+pytest-timeout==2.1.0
