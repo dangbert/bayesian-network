@@ -15,23 +15,22 @@ class BNReasoner:
         else:
             self.bn = net
 
-    def pruning(self, nodes: Tuple(MutableSet[str], MutableSet[str], MutableSet[str])):
+    def d_separated(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
         """
         Prune network iteratively. Deletes all outgoing edges of nodes in Z. Deletes
         every leaf node W which is not in sets of nodes X or Y or Z.
         """
-        X, Y, Z = node_set[0], node_set[1], node_set[2]
         relevant_nodes = set.union(X, Y, Z)
 
         nodes = self.bn.get_all_variables()
 
-        # edge pruning
+        # edge pruning i.e. delete all outgoing edges (from Z)
         for node in Z:
             children = self.bn.get_children(node)
             for child in children:
                 self.bn.del_edges([node, child])
 
-        # node pruning
+        # node pruning i.e. delete leaf nodes
         while True:
             leaf_nodes = [node for node in nodes if self.bn.children(node) == []]
 
@@ -42,25 +41,28 @@ class BNReasoner:
                 if node not in relevant_nodes:
                     self.bn.del_var(node)
 
+        # create list of paths
+        paths = [(x, y) for x in X and y in Y]
 
-    def path_type(self, x, y):
-        """
-        Determines whether a specific node n is a sequence, fork, or collider
-        on the path from x to y.
-        """
-        # confirm there is a path between x and y
-        # if nx.is_path(self.bn.structure, [x, y]):
+        for x, y in paths:
 
-        pass
+            # check whether x and y are not d-separated (i.e. there is a path)
+            if nx.has_path(nx.to_undirected(self.bn.structure), x_node, y_node):
+                return False
 
-    def d_blocked(self, x, y):
-        """
-        Checks whether the path between nodes x and y are d-blocked by z.
-        """
-        pass
+        return True
 
-    def d_seperated(self, x: MutableSet[str], y: MutableSet[str], z: MutableSet[str]):
+    def independence(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
         """
-        Checks whether all paths between nodes x and y are d-blocked.
+        Determine whether X is independent of Y given Z.
+        """
+        if d_separated(X, Y, Z):
+            return True
+
+
+    def network_pruning(self, Q: , e: ):
+        """
+        Given a set of query variables Q and evidence e, simplify the network
+        structure.
         """
         pass
