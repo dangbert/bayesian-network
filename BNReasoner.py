@@ -1,6 +1,7 @@
 from typing import Union, MutableSet
 from BayesNet import BayesNet
 import networkx as nx
+import pandas as pd
 
 
 class BNReasoner:
@@ -64,5 +65,17 @@ class BNReasoner:
         """
         Given a set of query variables Q and evidence e, simplify the network
         structure.
+        """
+        pass
+
+    @staticmethod
+    def marginalize(
+        factor: pd.DataFrame,
+        X: str,
+    ):
+        """
+        Given a factor and a variable X, compute the CPT in which X is summed-out.
+        :param factor: the factor to maginalize.
+        :param X: name of the variable to sum out.
         """
         pass
