@@ -45,14 +45,13 @@ def test_marginalization():
     # print(cpt)
 
     new_cpt = BNReasoner.marginalize(cpt, "dog-out")
-    assert new_cpt.equals(
-        pd.DataFrame(
-            {
-                "hear-bark": [False, True],
-                "p": [0.70 + 0.01, 0.99 + 0.3],
-            }
-        )
+    expected = pd.DataFrame(
+        {
+            "hear-bark": [False, True],
+            "p": [0.70 + 0.01, 0.99 + 0.3],
+        }
     )
+    assert new_cpt.equals(expected)
 
     # another test (from slide 90 of bayesian_combined.pdf)
     cpt = pd.DataFrame(
@@ -62,24 +61,25 @@ def test_marginalization():
             "p": [0.54, 0.06, 0.08, 0.32],
         }
     )
-    assert BNReasoner.marginalize(cpt, "A").equals(
-        pd.DataFrame(
-            {
-                "B": [True, False],
-                "p": [0.54 + 0.08, 0.06 + 0.32],
-            }
-        )
+    res = BNReasoner.marginalize(cpt, "A")
+    expected = pd.DataFrame(
+        {
+            "B": [False, True],
+            "p": [0.06 + 0.32, 0.54 + 0.08],
+        }
     )
-    assert BNReasoner.marginalize(cpt, "B").equals(
-        pd.DataFrame(
-            {
-                "A": [True, False],
-                "p": [0.54 + 0.06, 0.08 + 0.32],
-            }
-        )
-    )
+    assert res.equals(expected)
 
-    # more complicated test with 3 vars...
+    res = BNReasoner.marginalize(cpt, "B")
+    expected = pd.DataFrame(
+        {
+            "A": [False, True],
+            "p": [0.08 + 0.32, 0.54 + 0.06],
+        }
+    )
+    assert res.equals(expected)
+
+    # TODO: more complicated test with 3 vars...
     # cpt = pd.DataFrame(
     #    {
     #        "A": [True, True, True, True, True, True, True, True],

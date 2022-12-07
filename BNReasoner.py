@@ -70,12 +70,32 @@ class BNReasoner:
 
     @staticmethod
     def marginalize(
-        factor: pd.DataFrame,
+        f: pd.DataFrame,
         X: str,
     ):
         """
         Given a factor and a variable X, compute the CPT in which X is summed-out.
-        :param factor: the factor to maginalize.
+        TODO: may not work for higher dimensional factors
+
+        :param f: the factor to maginalize.
         :param X: name of the variable to sum out.
         """
-        pass
+        # indices = [idx for _, idx in enumerate(f[X])]
+
+        cpt = pd.DataFrame()
+        for var in f.keys():
+            if var in set(["p", X]):
+                continue
+            newP = []
+            cpt[var] = pd.Series(
+                list(set(f[var]))
+            )  # all vals var takes on... e.g. {False, True}
+
+            # TODO: swap to list comp
+            # for val in set(f[var]):
+            for val in cpt[var]:  # all vals var takes on... e.g. {False, True}
+                # cpt[var].append(sum(f.loc[f[var] == val]["p"]))
+                newP.append(sum(f.loc[f[var] == val]["p"]))
+
+            cpt["p"] = pd.Series(newP)
+        return cpt
