@@ -32,7 +32,7 @@ class BNReasoner:
     @staticmethod
     def node_pruning(network: BayesNet, nodes: List[str], r_nodes: MutableSet[str]):
         """
-        Delete leaf nodes which are not in X, Y, or Z.
+        Delete leaf nodes which are not in relevant nodes.
         """
         while True:
             leaf_nodes = [node for node in nodes if network.get_children(node) == [] if node not in r_nodes]
@@ -75,21 +75,40 @@ class BNReasoner:
         """
         return self.d_separated(X, Y, Z)
 
-    # TODO: define types for these params
     def network_pruning(self, Q: MutableSet[str], e: Dict[str, str]):
         """
         Given a set of query variables Q and evidence e, simplify the network
         structure.
         """
-        # bn_copy = deepcopy(self.bn)
+        bn_copy = deepcopy(self.bn)
 
         # relevant_nodes = set.union(X, Y, Z)
         # nodes = bn_copy.get_all_variables()
 
-        # edge_pruning(bn_copy, Z)
-        # node_pruning(bn_copy, nodes, relevant_nodes)
 
-        # cpt = get_cpt(e.)
+        BNReasoner.node_pruning(bn_copy, nodes, relevant_nodes)
+
+        E = set(e.keys())
+        BNReasoner.edge_pruning(bn_copy, E)
+
+        # TO DO: implement factor reduction
+
+        # node_pruning(bn_copy, nodes, relevant_nodes)
+        for key, value in e.items():
+            cpt = bn_copy.get_cpt(key)
+            cpt = cpt[cpt[key]] != value
+            print(cpt)
+
+            # Siens doen vanaf hier so check it:
+            # update the cpts in the BN
+            bn_copy.update_cpt(key, cpt)
+
+        # ehh? kijk hier even naar want r_nodes hier is nu niet meer XYZ zoals we
+        # wel willen in de node_pruning function
+        BNReasoner.node_pruning(bn_copy, nodes, r_nodes)
+
+
+
         pass
 
     @staticmethod
