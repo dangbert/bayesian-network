@@ -1,8 +1,9 @@
-from typing import Union, MutableSet, Dict
+from typing import Union, MutableSet, Dict, List
 from BayesNet import BayesNet
 import networkx as nx
 import pandas as pd
 from copy import deepcopy
+
 
 
 class BNReasoner:
@@ -18,28 +19,31 @@ class BNReasoner:
         else:
             self.bn = net
 
-    def edge_pruning(network, Z: MutableSet[str]):
+    @staticmethod
+    def edge_pruning(network: BayesNet, Z: MutableSet[str]):
         """
         Delete all outgoing edges from Z.
         """
         for node in Z:
-            children = bn_copy.get_children(node)
+            children = network.get_children(node)
             for child in children:
-                bn_copy.del_edge([node, child])
+                network.del_edge([node, child])
 
-    def node_pruning(network, nodes: List[str], r_nodes: MutableSet[str]):
+    @staticmethod
+    def node_pruning(network: BayesNet, nodes: List[str], r_nodes: MutableSet[str]):
         """
         Delete leaf nodes which are not in X, Y, or Z.
         """
         while True:
-            leaf_nodes = [node for node in nodes if bn_copy.get_children(node) == [] if node not in relevant_nodes]
+            leaf_nodes = [node for node in nodes if network.get_children(node) == [] if node not in r_nodes]
 
             if leaf_nodes == []:
                 break
 
             for node in leaf_nodes:
-                bn_copy.del_var(node)
+                network.del_var(node)
                 nodes.remove(node)
+
 
     def d_separated(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
         """
@@ -51,26 +55,8 @@ class BNReasoner:
         relevant_nodes = set.union(X, Y, Z)
         nodes = bn_copy.get_all_variables()
 
-        edge_pruning(bn_copy, Z)
-        node_pruning(bn_copy, nodes, relevant_nodes)
-
-
-        # edge pruning i.e. delete all outgoing edges (from Z)
-        '''for node in Z:
-            children = bn_copy.get_children(node)
-            for child in children:
-                bn_copy.del_edge([node, child])'''
-
-        # node pruning i.e. delete leaf nodes
-        """while True:
-            leaf_nodes = [node for node in nodes if bn_copy.get_children(node) == [] if node not in relevant_nodes]
-
-            if leaf_nodes == []:
-                break
-
-            for node in leaf_nodes:
-                bn_copy.del_var(node)
-                nodes.remove(node)"""
+        BNReasoner.edge_pruning(bn_copy, Z)
+        BNReasoner.node_pruning(bn_copy, nodes, relevant_nodes)
 
         # create list of paths
         paths = [(x, y_test) for x in X for y_test in Y]
