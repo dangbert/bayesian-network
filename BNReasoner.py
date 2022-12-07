@@ -5,7 +5,6 @@ import pandas as pd
 from copy import deepcopy
 
 
-
 class BNReasoner:
     def __init__(self, net: Union[str, BayesNet]):
         """
@@ -35,7 +34,12 @@ class BNReasoner:
         Delete leaf nodes which are not in relevant nodes.
         """
         while True:
-            leaf_nodes = [node for node in nodes if network.get_children(node) == [] if node not in r_nodes]
+            leaf_nodes = [
+                node
+                for node in nodes
+                if network.get_children(node) == []
+                if node not in r_nodes
+            ]
 
             if leaf_nodes == []:
                 break
@@ -43,7 +47,6 @@ class BNReasoner:
             for node in leaf_nodes:
                 network.del_var(node)
                 nodes.remove(node)
-
 
     def d_separated(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
         """
@@ -141,4 +144,32 @@ class BNReasoner:
                 newP.append(sum(f.loc[f[var] == val]["p"]))
 
             cpt["p"] = pd.Series(newP)
+        return cpt
+
+    @staticmethod
+    def max_out(
+        f: pd.DataFrame,
+        X: str,
+    ):
+        # e.g. ['B', 'C', 'D']
+        all_vars = [v for v in f.columns.values.tolist() if v != "p"]
+        # e.g. ['B', 'C']
+        new_vars = [v for v in all_vars if v not in set([X, "p"])]
+
+        # cpt = pd.DataFrame([], columns=new_vars + ["p"])
+        data = {}
+        for idx, row in f.iterrows():
+            key = row[new_vars].to_string()  # string representing vals in rows
+            # store index of row with these values that has max p value
+            if key not in data:
+                data[key] = idx
+            else:
+                if f.loc[data[key], "p"] < row["p"]:
+                    data[key] = idx  # found row (of same vals) with larger p
+
+        keep_idxs = list(data.values())  # list of row indices to keep
+        cpt = deepcopy(f.loc[keep_idxs, :])
+        del cpt[X]
+        cpt.reindex()
+        cpt = cpt.reset_index(drop=True)
         return cpt
