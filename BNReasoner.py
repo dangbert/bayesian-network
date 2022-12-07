@@ -126,25 +126,34 @@ class BNReasoner:
         :param f: the factor to maginalize.
         :param X: name of the variable to sum out.
         """
-        # indices = [idx for _, idx in enumerate(f[X])]
 
-        cpt = pd.DataFrame()
-        for var in f.keys():
-            if var in set(["p", X]):
-                continue
-            newP = []
-            cpt[var] = pd.Series(
-                list(set(f[var]))
-            )  # all vals var takes on... e.g. {False, True}
+        # e.g. ['B', 'C', 'D']
+        all_vars = [v for v in f.columns.values.tolist() if v != "p"]
+        # e.g. ['B', 'C']
+        new_vars = [v for v in all_vars if v not in set([X, "p"])]
 
-            # TODO: swap to list comp
-            # for val in set(f[var]):
-            for val in cpt[var]:  # all vals var takes on... e.g. {False, True}
-                # cpt[var].append(sum(f.loc[f[var] == val]["p"]))
-                newP.append(sum(f.loc[f[var] == val]["p"]))
+        cpt = pd.DataFrame([], columns=new_vars + ["p"])
+        data = {}
+        for idx, row in f.iterrows():
+            key = row[new_vars].to_string()  # string representing vals in rows
+            # store index of row with these values that has max p value
+            if key not in data:
+                data[key] = []
+            data[key].append(idx)
 
-            cpt["p"] = pd.Series(newP)
-        return cpt
+        idx_lists = list(data.values())  # list of row indices to keep
+        for indices in idx_lists:
+            # indices is a list of row indices in f where new_vars are identical
+            p = sum(f.loc[indices, "p"])
+            vals = f.loc[indices[0], new_vars].tolist()
+            # add new row to final cpt
+            # cpt = cpt.append(vals + [p], columns=new_vars + ["p"])
+            cpt = cpt.append(
+                pd.Series(vals + [p], index=cpt.columns), ignore_index=True
+            )
+
+        cpt = cpt.reset_index(drop=True)
+        return deepcopy(cpt)  # just in case
 
     @staticmethod
     def max_out(
