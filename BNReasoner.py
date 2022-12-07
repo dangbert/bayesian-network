@@ -1,4 +1,4 @@
-from typing import Union, MutableSet
+from typing import Union, MutableSet, Dict
 from BayesNet import BayesNet
 import networkx as nx
 import pandas as pd
@@ -18,27 +18,22 @@ class BNReasoner:
         else:
             self.bn = net
 
-    def d_separated(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
+    def edge_pruning(network, Z: MutableSet[str]):
         """
-        Prune network iteratively. Deletes all outgoing edges of nodes in Z. Deletes
-        every leaf node W which is not in sets of nodes X or Y or Z.
+        Delete all outgoing edges from Z.
         """
-
-        bn_copy = deepcopy(self.bn)
-        relevant_nodes = set.union(X, Y, Z)
-        nodes = bn_copy.get_all_variables()
-
-        # edge pruning i.e. delete all outgoing edges (from Z)
         for node in Z:
             children = bn_copy.get_children(node)
             for child in children:
                 bn_copy.del_edge([node, child])
 
-        # node pruning i.e. delete leaf nodes
+    def node_pruning(network, nodes: List[str], r_nodes: MutableSet[str]):
+        """
+        Delete leaf nodes which are not in X, Y, or Z.
+        """
         while True:
             leaf_nodes = [node for node in nodes if bn_copy.get_children(node) == [] if node not in relevant_nodes]
 
-            print(f'leaf_nodes: {leaf_nodes}')
             if leaf_nodes == []:
                 break
 
@@ -46,6 +41,36 @@ class BNReasoner:
                 bn_copy.del_var(node)
                 nodes.remove(node)
 
+    def d_separated(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
+        """
+        Prune network iteratively. Deletes all outgoing edges of nodes in Z. Deletes
+        every leaf node W which is not in sets of nodes X or Y or Z.
+        """
+        bn_copy = deepcopy(self.bn)
+
+        relevant_nodes = set.union(X, Y, Z)
+        nodes = bn_copy.get_all_variables()
+
+        edge_pruning(bn_copy, Z)
+        node_pruning(bn_copy, nodes, relevant_nodes)
+
+
+        # edge pruning i.e. delete all outgoing edges (from Z)
+        '''for node in Z:
+            children = bn_copy.get_children(node)
+            for child in children:
+                bn_copy.del_edge([node, child])'''
+
+        # node pruning i.e. delete leaf nodes
+        """while True:
+            leaf_nodes = [node for node in nodes if bn_copy.get_children(node) == [] if node not in relevant_nodes]
+
+            if leaf_nodes == []:
+                break
+
+            for node in leaf_nodes:
+                bn_copy.del_var(node)
+                nodes.remove(node)"""
 
         # create list of paths
         paths = [(x, y_test) for x in X for y_test in Y]
@@ -58,18 +83,27 @@ class BNReasoner:
 
         return True
 
-    def independence(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
+    def independent(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
         """
         Determine whether X is independent of Y given Z.
         """
         return self.d_separated(X, Y, Z)
 
     # TODO: define types for these params
-    def network_pruning(self, Q, e):
+    def network_pruning(self, Q: MutableSet[str], e: Dict[str, str]):
         """
         Given a set of query variables Q and evidence e, simplify the network
         structure.
         """
+        # bn_copy = deepcopy(self.bn)
+
+        # relevant_nodes = set.union(X, Y, Z)
+        # nodes = bn_copy.get_all_variables()
+
+        # edge_pruning(bn_copy, Z)
+        # node_pruning(bn_copy, nodes, relevant_nodes)
+
+        # cpt = get_cpt(e.)
         pass
 
     @staticmethod
