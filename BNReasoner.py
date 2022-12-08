@@ -33,7 +33,7 @@ class BNReasoner:
         """
         Delete leaf nodes which are not in relevant nodes.
         """
-        nodes = bn_copy.get_all_variables()
+        nodes = network.get_all_variables()
 
         while True:
             leaf_nodes = [
@@ -78,7 +78,6 @@ class BNReasoner:
         independent of Y given Z.
         """
         return self.d_separated(X, Y, Z)
-
 
     """
     Possibly TODO: write factor reduction in separate function to use again for
@@ -195,7 +194,6 @@ class BNReasoner:
 
         # create new (empty) table for multiplied factors
         cpt = pd.DataFrame(columns=column_names)
-
 
         # return h
         pass

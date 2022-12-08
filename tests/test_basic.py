@@ -1,7 +1,9 @@
 from tests.conftest import DOG_FILE, compare_frames
 from BNReasoner import BNReasoner
 import pandas as pd
+from pandas.testing import assert_frame_equal
 import copy
+import numpy as np
 
 
 def test_d_separation():
@@ -75,6 +77,7 @@ def test_marginalization():
         }
     )
     compare_frames(res, expected)
+    # assert_frame_equal(res, expected) # note this fails due to a dtype difference
 
     cpt = copy.deepcopy(FACTOR_EX2)
     res = BNReasoner.marginalize(cpt, "A")
@@ -159,6 +162,30 @@ def test_maxing_out():
     )
     res = BNReasoner.max_out(cpt, "dog-out")
     assert res.equals(expected)
+
+
+def test_multiply_factors():
+    # from "multiplication of factors" slides:
+    f1 = copy.deepcopy(FACTOR_EX3)
+    f2 = pd.DataFrame(
+        {
+            "D": [True, True, False, False],
+            "E": [True, False, True, False],
+            "p": [0.448, 0.192, 0.112, 0.248],
+        }
+    )
+    res = BNReasoner.multiply_factors(f1, f2)
+    assert res.shape == (32, 4)
+    # assert set(res.columns.values.tolist()) == set(['B', 'C', 'D', 'E', 'p'])
+    assert res.columns.values.tolist() == ["B", "C", "D", "E", "p"]
+
+    # for simplicity we'll just check that certain expected rows exist
+    assert (res == np.array([True, True, True, True, 0.95 * 0.448])).all(1).any()
+    assert (res == np.array([True, True, True, False, 0.95 * 0.192])).all(1).any()
+    assert (res == np.array([True, True, False, True, 0.05 * 0.112])).all(1).any()
+    assert (res == np.array([False, False, False, False, 0.248])).all(1).any()
+
+    # TODO: can we test an example when f2 has more than 2 variables??
 
 
 def test_network_pruning():
