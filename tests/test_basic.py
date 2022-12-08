@@ -159,3 +159,5 @@ def test_maxing_out():
     )
     res = BNReasoner.max_out(cpt, "dog-out")
     assert res.equals(expected)
+
+def test_network_pruning():

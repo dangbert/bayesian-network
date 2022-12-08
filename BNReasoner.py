@@ -29,10 +29,12 @@ class BNReasoner:
                 network.del_edge([node, child])
 
     @staticmethod
-    def node_pruning(network: BayesNet, nodes: List[str], r_nodes: MutableSet[str]):
+    def node_pruning(network: BayesNet, r_nodes: MutableSet[str] -> None):
         """
         Delete leaf nodes which are not in relevant nodes.
         """
+        nodes = bn_copy.get_all_variables()
+
         while True:
             leaf_nodes = [
                 node
@@ -50,16 +52,14 @@ class BNReasoner:
 
     def d_separated(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
         """
-        Prune network iteratively. Deletes all outgoing edges of nodes in Z. Deletes
-        every leaf node W which is not in sets of nodes X or Y or Z.
+        Given three sets of variables X, Y, and Z, determine whether X is d-separated
+        of Y given Z by pruning network iteratively: Delete all outgoing edges of nodes
+        in Z. Delete every leaf node W which is not in sets of nodes X or Y or Z.
         """
         bn_copy = deepcopy(self.bn)
 
-        relevant_nodes = set.union(X, Y, Z)
-        nodes = bn_copy.get_all_variables()
-
         BNReasoner.edge_pruning(bn_copy, Z)
-        BNReasoner.node_pruning(bn_copy, nodes, relevant_nodes)
+        BNReasoner.node_pruning(bn_copy, set.union(X, Y, Z))
 
         # create list of paths
         paths = [(x, y_test) for x in X for y_test in Y]
@@ -74,45 +74,31 @@ class BNReasoner:
 
     def independent(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
         """
-        Determine whether X is independent of Y given Z.
+        Given three sets of variables X, Y, and Z, determine whether X is
+        independent of Y given Z.
         """
         return self.d_separated(X, Y, Z)
 
-    def network_pruning(self, Q: MutableSet[str], e: Dict[str, str]):
+    def network_pruning(self, Q: MutableSet[str], e: Dict[str, str] -> None):
         """
         Given a set of query variables Q and evidence e, simplify the network
-        structure.
+        structure, so that queries of the form P(Q|E) can still be correctly
+        calculated.
         """
         bn_copy = deepcopy(self.bn)
-
-        # relevant_nodes = set.union(X, Y, Z)
-        # nodes = bn_copy.get_all_variables()
-
-
-        BNReasoner.node_pruning(bn_copy, nodes, relevant_nodes)
 
         E = set(e.keys())
         BNReasoner.edge_pruning(bn_copy, E)
 
-        # TO DO: implement factor reduction
-
-        # node_pruning(bn_copy, nodes, relevant_nodes)
+        # implement factor reduction
         for key, value in e.items():
             cpt = bn_copy.get_cpt(key)
             cpt = cpt[cpt[key]] != value
-            print(cpt)
 
-            # Siens doen vanaf hier so check it:
             # update the cpts in the BN
             bn_copy.update_cpt(key, cpt)
 
-        # ehh? kijk hier even naar want r_nodes hier is nu niet meer XYZ zoals we
-        # wel willen in de node_pruning function
-        BNReasoner.node_pruning(bn_copy, nodes, r_nodes)
-
-
-
-        pass
+        BNReasoner.node_pruning(bn_copy, set.union(Q, E))
 
     @staticmethod
     def marginalize(
