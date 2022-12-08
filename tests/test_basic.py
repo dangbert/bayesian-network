@@ -1,4 +1,4 @@
-from tests.conftest import DOG_FILE
+from tests.conftest import DOG_FILE, compare_frames
 from BNReasoner import BNReasoner
 import pandas as pd
 import copy
@@ -67,33 +67,33 @@ def test_marginalization():
     # assert cpt.equals(br.bn.get_cpt("hear-bark"))
     # print(cpt)
 
-    new_cpt = BNReasoner.marginalize(cpt, "dog-out")
+    res = BNReasoner.marginalize(cpt, "dog-out")
     expected = pd.DataFrame(
         {
             "hear-bark": [False, True],
             "p": [0.70 + 0.01, 0.99 + 0.3],
         }
     )
-    assert new_cpt.equals(expected)
+    compare_frames(res, expected)
 
     cpt = copy.deepcopy(FACTOR_EX2)
     res = BNReasoner.marginalize(cpt, "A")
     expected = pd.DataFrame(
         {
-            "B": [False, True],
-            "p": [0.06 + 0.32, 0.54 + 0.08],
+            "B": [True, False],
+            "p": [0.54 + 0.08, 0.06 + 0.32],
         }
     )
-    assert res.equals(expected)
+    compare_frames(res, expected)
 
     res = BNReasoner.marginalize(cpt, "B")
     expected = pd.DataFrame(
         {
-            "A": [False, True],
-            "p": [0.08 + 0.32, 0.54 + 0.06],
+            "A": [True, False],
+            "p": [0.54 + 0.06, 0.08 + 0.32],
         }
     )
-    assert res.equals(expected)
+    compare_frames(res, expected)
 
     cpt = copy.deepcopy(FACTOR_EX3)
     res = BNReasoner.marginalize(cpt, "D")
@@ -104,7 +104,7 @@ def test_marginalization():
             "p": [1.0, 1.0, 1.0, 1.0],
         }
     )
-    assert res.equals(expected)
+    compare_frames(res, expected)
 
     # TODO: more complicated test with 3 vars...
     # cpt = pd.DataFrame(
@@ -163,8 +163,8 @@ def test_maxing_out():
 
 def test_network_pruning():
 
-    Q = {'C', 'B'}
-    e = {'D': 'True'}
+    Q = {"C", "B"}
+    e = {"D": "True"}
 
     res = BNReasoner.network_pruning(Q, e)
 

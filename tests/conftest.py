@@ -2,6 +2,7 @@ import glob
 import os
 import pytest
 import logging
+import pandas as pd
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.abspath(os.path.dirname(TEST_DIR))
@@ -29,3 +30,24 @@ def run_around_tests():
 
     yield
     # code that will run after a given test:
+
+
+def compare_frames(f1: pd.DataFrame, f2: pd.DataFrame):
+    """
+    Assert two dataframes are equivalent.
+    Created this because f1.equals(f2) seems to incorrectly return False for marginalization tests.
+    """
+    same = False
+
+    same = type(f1) == type(f2) and type(f1) == pd.DataFrame
+
+    same = same and f1.columns.values.tolist() == f2.columns.values.tolist()
+    same = same and f1.index.values.tolist() == f2.index.values.tolist()
+    same = same and set((f1 == f2).all(True)) == set([True])
+
+    if not same:
+        print("dataframes are different:")
+        print(f1)
+        print()
+        print(f2)
+    assert same
