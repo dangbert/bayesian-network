@@ -160,4 +160,21 @@ def test_maxing_out():
     res = BNReasoner.max_out(cpt, "dog-out")
     assert res.equals(expected)
 
+
 def test_network_pruning():
+
+    Q = {'C', 'B'}
+    e = {'D': 'True'}
+
+    res = BNReasoner.network_pruning(Q, e)
+
+    expected = pd.DataFrame(
+        {
+            "B": [True, True, False, False],
+            "C": [True, False, True, False],
+            "D": [True, True, True, True],
+            "p": [0.95, 0.9, 0.8, 1.0],
+        }
+    )
+
+    assert res.equals(expected)

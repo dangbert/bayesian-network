@@ -19,7 +19,7 @@ class BNReasoner:
             self.bn = net
 
     @staticmethod
-    def edge_pruning(network: BayesNet, Z: MutableSet[str]):
+    def edge_pruning(network: BayesNet, Z: MutableSet[str]) -> None:
         """
         Delete all outgoing edges from Z.
         """
@@ -29,7 +29,7 @@ class BNReasoner:
                 network.del_edge([node, child])
 
     @staticmethod
-    def node_pruning(network: BayesNet, r_nodes: MutableSet[str] -> None):
+    def node_pruning(network: BayesNet, r_nodes: MutableSet[str]) -> None:
         """
         Delete leaf nodes which are not in relevant nodes.
         """
@@ -79,12 +79,19 @@ class BNReasoner:
         """
         return self.d_separated(X, Y, Z)
 
-    def network_pruning(self, Q: MutableSet[str], e: Dict[str, str] -> None):
+
+    """
+    Possibly TODO: write factor reduction in separate function to use again for
+    posterior marginals
+    """
+
+    def network_pruning(self, Q: MutableSet[str], e: Dict[str, str]) -> None:
         """
         Given a set of query variables Q and evidence e, simplify the network
         structure, so that queries of the form P(Q|E) can still be correctly
         calculated.
         """
+
         bn_copy = deepcopy(self.bn)
 
         E = set(e.keys())
@@ -92,11 +99,14 @@ class BNReasoner:
 
         # implement factor reduction
         for key, value in e.items():
-            cpt = bn_copy.get_cpt(key)
-            cpt = cpt[cpt[key]] != value
+            children = bn_copy.get_children(key)
 
-            # update the cpts in the BN
-            bn_copy.update_cpt(key, cpt)
+            for child_node in children:
+                cpt = bn_copy.get_cpt(child_node)
+                cpt = cpt[cpt[key]] != value
+
+                # update the cpts in the BN
+                bn_copy.update_cpt(child_node, cpt)
 
         BNReasoner.node_pruning(bn_copy, set.union(Q, E))
 
@@ -142,10 +152,14 @@ class BNReasoner:
         return deepcopy(cpt)  # just in case
 
     @staticmethod
-    def max_out(
-        f: pd.DataFrame,
-        X: str,
-    ):
+    def max_out(f: pd.DataFrame, X: str):
+        """
+        Given a factor and a variable X, compute the CPT in which X is maxed-out.
+        Keep track of which instantiation of X led to the maximized value.
+
+        :param f: the factor to max-out.
+        :param X: name of the variable to max-out.
+        """
         # e.g. ['B', 'C', 'D']
         all_vars = [v for v in f.columns.values.tolist() if v != "p"]
         # e.g. ['B', 'C']
@@ -168,3 +182,20 @@ class BNReasoner:
         cpt.reindex()
         cpt = cpt.reset_index(drop=True)
         return cpt
+
+    def multiply_factors(self, f: pd.DataFrame, g: pd.DataFrame, Z: MutableSet[str]):
+        """
+        Given two factors f and g, compute the multiplied factor h = f*g.
+
+        :param Z: set of variables ..
+        :param f, g: cpts of factors f and g
+        """
+
+        column_names = set.union(set(f.columns), set(g.columns))
+
+        # create new (empty) table for multiplied factors
+        cpt = pd.DataFrame(columns=column_names)
+
+
+        # return h
+        pass
