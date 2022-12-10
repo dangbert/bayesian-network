@@ -182,18 +182,17 @@ class BNReasoner:
         cpt = cpt.reset_index(drop=True)
         return cpt
 
-    def multiply_factors(self, f: pd.DataFrame, g: pd.DataFrame, Z: MutableSet[str]):
+    def multiply_factors(self, f: pd.DataFrame, g: pd.DataFrame):
         """
-        Given two factors f and g, compute the multiplied factor h = f*g.
+        Given two factors f and g, compute the multiplied factor h = f * g.
 
-        :param Z: set of variables ..
         :param f, g: cpts of factors f and g
         """
+        merge_on = list(f.columns & g.columns)
+        merge_on.remove('p')
 
-        column_names = set.union(set(f.columns), set(g.columns))
+        # https://stackoverflow.com/questions/54657907/pandas-merging-two-dataframes-on-multiple-columns-and-multiplying-result
+        h = f.merge(g, on=merge_on, how = 'outer')
+        h['prob'] = h['p_x'] * h['p_y']
 
-        # create new (empty) table for multiplied factors
-        cpt = pd.DataFrame(columns=column_names)
-
-        # return h
-        pass
+        return h.drop(['p_x', 'p_y'], axis=1)
