@@ -175,8 +175,7 @@ def test_multiply_factors():
         }
     )
     res = BNReasoner.multiply_factors(f1, f2)
-    assert res.shape == (32, 4)
-    # assert set(res.columns.values.tolist()) == set(['B', 'C', 'D', 'E', 'p'])
+    assert res.shape == (16, 5)
     assert res.columns.values.tolist() == ["B", "C", "D", "E", "p"]
 
     # for simplicity we'll just check that certain expected rows exist
@@ -184,8 +183,6 @@ def test_multiply_factors():
     assert (res == np.array([True, True, True, False, 0.95 * 0.192])).all(1).any()
     assert (res == np.array([True, True, False, True, 0.05 * 0.112])).all(1).any()
     assert (res == np.array([False, False, False, False, 0.248])).all(1).any()
-
-    # TODO: can we test an example when f2 has more than 2 variables??
 
 
 def test_network_pruning():
@@ -207,14 +204,50 @@ def test_network_pruning():
     assert res.equals(expected)
 
 
-def test_ordering__min_fill():
+def test_ordering__min_deg():
     br = BNReasoner(LEC1_FILE)
+
     # test as if we're removing all vars
     remove_vars = {"Winter?", "Sprinkler?", "Rain?", "Wet Grass?", "Slippery Road?"}
-
     res = br.get_ordering(remove_vars, method=Ordering.MIN_DEG)
-    assert res == ["Slippery Road?", "Wet Grass?", "Rain?", "Sprinkler?" "Winter?"]
+    assert res == ["Slippery Road?", "Wet Grass?", "Rain?", "Sprinkler?", "Winter?"]
+
+    remove_vars = {"Sprinkler?", "Rain?"}
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_DEG)
+    assert res == ["Sprinkler?", "Rain?"]
+
+    remove_vars = {"Wet Grass?", "Sprinkler?", "Rain?"}
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_DEG)
+    assert res == ["Wet Grass?", "Sprinkler?", "Rain?"]
+
+    remove_vars = {"Rain?"}
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_DEG)
+    assert res == ["Rain?"]
+
+    # TODO: ideally test on another network as well or visualize ig in middle of process...
 
 
-def test_ordering__min_deg():
-    assert False
+def test_ordering__min_fill():
+    br = BNReasoner(LEC1_FILE)
+    # int_graph = br.bn.get_interaction_graph()
+    # nx.draw(int_graph, with_labels=True)
+    # plt.show()
+
+    # test as if we're removing all vars
+    remove_vars = {"Winter?", "Sprinkler?", "Rain?", "Wet Grass?", "Slippery Road?"}
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_FILL)
+    assert res == ["Slippery Road?", "Wet Grass?", "Rain?", "Sprinkler?", "Winter?"]
+
+    # all but wet grass:
+    remove_vars = {"Winter?", "Sprinkler?", "Rain?", "Slippery Road?"}
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_FILL)
+    assert res == ["Slippery Road?", "Winter?", "Rain?", "Sprinkler?"]
+
+    # (both vars add 0 new interactions)
+    remove_vars = {"Wet Grass?", "Winter?"}
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_FILL)
+    assert res == ["Wet Grass?", "Winter?"]
+
+    remove_vars = {"Rain?"}
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_FILL)
+    assert res == ["Rain?"]

@@ -190,7 +190,8 @@ class BNReasoner:
         cpt = cpt.reset_index(drop=True)
         return cpt
 
-    def multiply_factors(self, f: pd.DataFrame, g: pd.DataFrame):
+    @staticmethod
+    def multiply_factors(f: pd.DataFrame, g: pd.DataFrame):
         """
         Given two factors f and g, compute the multiplied factor h = f * g.
 
@@ -201,69 +202,78 @@ class BNReasoner:
 
         # https://stackoverflow.com/questions/54657907/pandas-merging-two-dataframes-on-multiple-columns-and-multiplying-result
         h = f.merge(g, on=merge_on, how="outer")
-        h["prob"] = h["p_x"] * h["p_y"]
+        h["p"] = h["p_x"] * h["p_y"]
 
         return h.drop(["p_x", "p_y"], axis=1)
 
     def get_ordering(self, vars: MutableSet[str], method: Ordering) -> List[str]:
+        """
+        Suggests the order by which to sum out vars (according to the desired heuristic/method).
+        Note that when computing the ordering, in the case of a tie (e.g. two nodes have
+        the same degree) alphabetical order is used as the tie-breaker.
+        # TODO: consider merging get_ordering into "variable elimination" function?
+        """
         net = deepcopy(self.bn)
         to_remove = set(vars)
         assert to_remove.issubset(set(net.get_all_variables()))
 
-        # TODO: based on slides, we should be adding new edges to the interaction graph, not net!!
         def get_new_interactions(
-            net: BayesNet, var: str, add_edges=False
+            ig: nx.Graph, var: str, add_edges=False
         ) -> List[Tuple[str, str]]:
-            """Helper function returning a dict of new interactions if var were removed from network.
-            Optionally also adds new edges if add_edges == True.
+            """
+            Helper function returning a dict of new interactions if var were removed
+            from the provided interaction graph.
+            Optionally also adds new interactions if add_edges == True.
             """
             newi = dict()
-            neighbors = net.structure.neighbors(var)
+            neighbors = list(ig.neighbors(var))
+
+            # TODO: this is wrong!
             for n1 in neighbors:
                 for n2 in neighbors:
                     key = ",".join(sorted([n1, n2]))  # e.g. "A,B"
-                    if n1 == n2 or net.structure.has_edge(n1, n2) or key in newi:
+                    if n1 == n2 or ig.has_edge(n1, n2) or key in newi:
                         continue
                     newi[key] = (n1, n2)
                     if add_edges:
-                        net.add_edge((n1, n2))
+                        ig.add_edge(n1, n2)
             return list(newi.values())
-            # net.add_edge()
 
         ordering = []
         if method == Ordering.MIN_DEG:
+            ig = net.get_interaction_graph()
+            # simulate summing out (on ig) until all desired variables are removed
             while len(to_remove) > 0:
-                # simulate summing out until all desired variables are removed
-                # TODO: note we could just merge get_ordering into "variable elimination" function
-                remaining = sorted(net.get_all_variables())
-
+                remaining = sorted([n for n in ig.nodes if n in vars])
                 # determine which var to remove next:
-                var = min(remaining, key=lambda v: net.structure.degree[v])
+                var = min(remaining, key=lambda v: ig.degree[v])
 
-                # now add an edge between every neighbor of var that's not already connected
-                neighbors = net.structure.neighbors(var)
+                # add an edge between every neighbor of var that's not already connected
+                neighbors = list(ig.neighbors(var))
                 for n1 in neighbors:
                     for n2 in neighbors:
-                        if n1 == n2 or net.structure.has_edge(n1, n2):
+                        if n1 == n2 or ig.has_edge(n1, n2):
                             continue
-                        net.add_edge(n1, n2)
+                        ig.add_edge(n1, n2)
                         # note that if we were actually summing out var, we'd do factor multiplication here to update the cpts...
 
-                net.del_var(var)
+                ig.remove_node(var)
                 ordering.append(var)
                 to_remove.discard(var)
-            # raise NotImplementedError("TODO")
+
         elif method == Ordering.MIN_FILL:
+            ig = net.get_interaction_graph()
             while len(to_remove) > 0:
-                remaining = sorted(net.get_all_variables())
+                remaining = sorted([n for n in ig.nodes if n in vars])
+                # inters = {v: get_new_interactions(ig, v) for v in remaining}
+                # print(f"\ninters = {inters}")
+                var = min(remaining, key=lambda v: len(get_new_interactions(ig, v)))
 
-                # determine which var to remove next:
-                var = min(remaining, key=lambda v: len(get_new_interactions(net, v)))
+                # apply changes
+                get_new_interactions(ig, var, add_edges=True)
+                ig.remove_node(var)
+                # print(f"removing node {var}")
 
-                # now add an edge between every neighbor of var that's not already connected
-                get_new_interactions(net, var, add_edges=True)
-
-                net.del_var(var)
                 ordering.append(var)
                 to_remove.discard(var)
         else:
