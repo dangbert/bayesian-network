@@ -1,8 +1,16 @@
-from typing import Union, MutableSet, Dict, List
+from typing import Union, MutableSet, Dict, List, Any, Tuple
 from BayesNet import BayesNet
 import networkx as nx
 import pandas as pd
 from copy import deepcopy
+from enum import Enum
+
+
+class Ordering(Enum):
+    """Defines types of ordering heuristics/methods."""
+
+    MIN_FILL = "min_fill"
+    MIN_DEG = "min_degree"
 
 
 class BNReasoner:
@@ -189,10 +197,100 @@ class BNReasoner:
         :param f, g: cpts of factors f and g
         """
         merge_on = list(f.columns & g.columns)
-        merge_on.remove('p')
+        merge_on.remove("p")
 
         # https://stackoverflow.com/questions/54657907/pandas-merging-two-dataframes-on-multiple-columns-and-multiplying-result
-        h = f.merge(g, on=merge_on, how = 'outer')
-        h['prob'] = h['p_x'] * h['p_y']
+        h = f.merge(g, on=merge_on, how="outer")
+        h["prob"] = h["p_x"] * h["p_y"]
 
-        return h.drop(['p_x', 'p_y'], axis=1)
+        return h.drop(["p_x", "p_y"], axis=1)
+
+    def get_ordering(self, vars: MutableSet[str], method: Ordering) -> List[str]:
+        net = deepcopy(self.bn)
+        to_remove = set(vars)
+        assert to_remove.issubset(set(net.get_all_variables()))
+
+        # TODO: based on slides, we should be adding new edges to the interaction graph, not net!!
+        def get_new_interactions(
+            net: BayesNet, var: str, add_edges=False
+        ) -> List[Tuple[str, str]]:
+            """Helper function returning a dict of new interactions if var were removed from network.
+            Optionally also adds new edges if add_edges == True.
+            """
+            newi = dict()
+            neighbors = net.structure.neighbors(var)
+            for n1 in neighbors:
+                for n2 in neighbors:
+                    key = ",".join(sorted([n1, n2]))  # e.g. "A,B"
+                    if n1 == n2 or net.structure.has_edge(n1, n2) or key in newi:
+                        continue
+                    newi[key] = (n1, n2)
+                    if add_edges:
+                        net.add_edge((n1, n2))
+            return list(newi.values())
+            # net.add_edge()
+
+        ordering = []
+        if method == Ordering.MIN_DEG:
+            while len(to_remove) > 0:
+                # simulate summing out until all desired variables are removed
+                # TODO: note we could just merge get_ordering into "variable elimination" function
+                remaining = sorted(net.get_all_variables())
+
+                # determine which var to remove next:
+                var = min(remaining, key=lambda v: net.structure.degree[v])
+
+                # now add an edge between every neighbor of var that's not already connected
+                neighbors = net.structure.neighbors(var)
+                for n1 in neighbors:
+                    for n2 in neighbors:
+                        if n1 == n2 or net.structure.has_edge(n1, n2):
+                            continue
+                        net.add_edge(n1, n2)
+                        # note that if we were actually summing out var, we'd do factor multiplication here to update the cpts...
+
+                net.del_var(var)
+                ordering.append(var)
+                to_remove.discard(var)
+            # raise NotImplementedError("TODO")
+        elif method == Ordering.MIN_FILL:
+            while len(to_remove) > 0:
+                remaining = sorted(net.get_all_variables())
+
+                # determine which var to remove next:
+                var = min(remaining, key=lambda v: len(get_new_interactions(net, v)))
+
+                # now add an edge between every neighbor of var that's not already connected
+                get_new_interactions(net, var, add_edges=True)
+
+                net.del_var(var)
+                ordering.append(var)
+                to_remove.discard(var)
+        else:
+            raise ValueError(f"ordering method not implemented '{method}'")
+
+        return ordering
+
+    def MEP(self, e: Dict[str, Any], ordering_method=Ordering.MIN_DEG) -> pd.Series:
+        """
+        Given evidence e, compute the most probable explanation.
+        :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
+
+        :return a series of assignments (for all variables in the network) as tuples.
+        """
+        net = deepcopy(self.bn)
+
+        all_vars = set(self.bn.get_all_variables())
+
+        known_vars = set(list(e.keys()))
+        Q = all_vars - known_vars  # list of unknown vars
+
+        net = BNReasoner.edge_pruning(net, known_vars)
+        # no node_pruning for MEP because Q + e = all_vars
+        # net = BNReasoner.node_pruning(net, unknown_vars)
+
+        # compute an ordering for variable removal
+        ordering = net.get_ordering(Q, method=ordering_method)  # Q or something else??
+
+        # TODO do removals, computing new cpts (use extended factors somehow)...
+        # also use BayesNet.reduce_factor and get_compatible_instantiations_table

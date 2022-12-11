@@ -1,5 +1,5 @@
-from tests.conftest import DOG_FILE, compare_frames
-from BNReasoner import BNReasoner
+from tests.conftest import DOG_FILE, LEC1_FILE, compare_frames
+from BNReasoner import BNReasoner, Ordering
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import copy
@@ -205,3 +205,16 @@ def test_network_pruning():
     )
 
     assert res.equals(expected)
+
+
+def test_ordering__min_fill():
+    br = BNReasoner(LEC1_FILE)
+    # test as if we're removing all vars
+    remove_vars = {"Winter?", "Sprinkler?", "Rain?", "Wet Grass?", "Slippery Road?"}
+
+    res = br.get_ordering(remove_vars, method=Ordering.MIN_DEG)
+    assert res == ["Slippery Road?", "Wet Grass?", "Rain?", "Sprinkler?" "Winter?"]
+
+
+def test_ordering__min_deg():
+    assert False
