@@ -5,6 +5,9 @@ import pandas as pd
 from copy import deepcopy
 from enum import Enum
 
+# Evidence = Dict[str, Any]
+Evidence = pd.Series  # e.g.: pd.Series({"A": True, "B": False})
+
 
 class Ordering(Enum):
     """Defines types of ordering heuristics/methods."""
@@ -281,12 +284,15 @@ class BNReasoner:
 
         return ordering
 
-    def MEP(self, e: Dict[str, Any], ordering_method=Ordering.MIN_DEG) -> pd.Series:
+    def MPE(
+        self, e: Evidence, ordering_method=Ordering.MIN_DEG
+    ) -> Tuple[Evidence, float]:
         """
         Given evidence e, compute the most probable explanation.
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
+        :param ordering_method: (optional) enum indicating which ordering method to use.
 
-        :return a series of assignments (for all variables in the network) as tuples.
+        :return a tuple containing a dictionary of assignments (for all variables in the network), and a probabilitity.
         """
         net = deepcopy(self.bn)
 
@@ -304,3 +310,15 @@ class BNReasoner:
 
         # TODO do removals, computing new cpts (use extended factors somehow)...
         # also use BayesNet.reduce_factor and get_compatible_instantiations_table
+
+    def MAP(
+        self, Q: MutableSet[str], e: Evidence, ordering_method=Ordering.MIN_DEG
+    ) -> Tuple[Evidence, float]:
+        """
+        Compute the maximum a-posteriory instantiation + value of query variables Q given (possibly empty) evidence e.
+
+        :param Q: a set of variable names being queried.
+        :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
+        :param ordering_method: (optional) enum indicating which ordering method to use.
+        """
+        pass

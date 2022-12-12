@@ -6,11 +6,12 @@ import pandas as pd
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.abspath(os.path.dirname(TEST_DIR))
+EXAMPLES_DIR = os.path.join(ROOT_DIR, "examples/")
 
 # some files for testing
-DOG_FILE = os.path.join(ROOT_DIR, "testing/dog_problem.BIFXML")
-LEC1_FILE = os.path.join(ROOT_DIR, "testing/lecture_example.BIFXML")
-LEC2_FILE = os.path.join(ROOT_DIR, "testing/lecture_example2.BIFXML")
+DOG_FILE = os.path.join(EXAMPLES_DIR, "dog_problem.BIFXML")
+LEC1_FILE = os.path.join(EXAMPLES_DIR, "lecture_example.BIFXML")
+LEC2_FILE = os.path.join(EXAMPLES_DIR, "lecture_example2.BIFXML")
 
 
 def pytest_sessionstart(session):

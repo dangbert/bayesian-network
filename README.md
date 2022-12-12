@@ -1,6 +1,27 @@
-# Useful Pointers for Assignment 2 of KR21
-Jenny
-SIEN
+# Project Info
+This project implements a Bayesian network for performing inference and queries.
+
+`BayesNet` objects can be instantiated using the [BIFXML](https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/) format (see `examples/` folder in this repo), or through the `BayesNet:create_bn()` function which takes a list of variables, list of edges, and a dictionary of conditional probability tables (CPTs) as pandas DataFrames.
+
+Authors:
+* [Jenny](https://github.com/PennyEder)
+* [Dan](https://github.com/dangbert)
+* [Sien]()
+* Note also this project was a fork of [this repo](https://github.com/sa-and/KR21_project2) which provided the original `BayesNet` class definition.
+
+## Running unit tests:
+This project includes a set of unit tests located in the `tests/` folder.  You can automatically run them all with [pytest](https://docs.pytest.org).
+
+````bash
+pip install -r requirements.txt
+
+pytest -v
+````
+
+Also if you look next to a commit in this repo you'll see a ✅ or ❌ indicating the status of the unit tests (run automatically when code is pushed to github).  You can click on it and inspect the output of the unit tests there as well.
+
+---
+# Useful Pointers:
 
 ## BIFXML file format
 The BIFXML file format is meant to provide an easy means of exchanging Bayesian networks. It works with standard XML
