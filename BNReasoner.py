@@ -17,6 +17,8 @@ class Ordering(Enum):
 
 
 class BNReasoner:
+    bn: BayesNet
+
     def __init__(self, net: Union[str, BayesNet]):
         """
         :param net: either file path of the bayesian network in BIFXML format or BayesNet object
@@ -27,30 +29,35 @@ class BNReasoner:
             # Loads the BN from an BIFXML file
             self.bn.load_from_bifxml(net)
         else:
+            assert type(net) == BayesNet
             self.bn = net
 
-    @staticmethod
-    def edge_pruning(network: BayesNet, Z: MutableSet[str]) -> None:
+    def deepcopy(self) -> "BNReasoner":
+        """Clones this object, returning a deep copy"""
+        return BNReasoner(deepcopy(self.bn))
+
+    def _edge_pruning(self, Z: MutableSet[str]) -> None:
         """
-        Delete all outgoing edges from Z.
+        Delete all outgoing edges in network from nodes Z.
+        (Note: doesn't update CPTs).
         """
         for node in Z:
-            children = network.get_children(node)
+            children = self.bn.get_children(node)
             for child in children:
-                network.del_edge([node, child])
+                self.bn.del_edge([node, child])
 
-    @staticmethod
-    def node_pruning(network: BayesNet, r_nodes: MutableSet[str]) -> None:
+    def _node_pruning(self, r_nodes: MutableSet[str]) -> None:
         """
-        Delete leaf nodes which are not in relevant nodes.
+        Delete leaf nodes in network which are not in relevant nodes.
+        (Note: doesn't update CPTs).
         """
-        nodes = network.get_all_variables()
+        nodes = self.bn.get_all_variables()
 
         while True:
             leaf_nodes = [
                 node
                 for node in nodes
-                if network.get_children(node) == []
+                if self.bn.get_children(node) == []
                 if node not in r_nodes
             ]
 
@@ -58,7 +65,7 @@ class BNReasoner:
                 break
 
             for node in leaf_nodes:
-                network.del_var(node)
+                self.bn.del_var(node)
                 nodes.remove(node)
 
     def d_separated(self, X: MutableSet[str], Y: MutableSet[str], Z: MutableSet[str]):
@@ -67,10 +74,11 @@ class BNReasoner:
         of Y given Z by pruning network iteratively: Delete all outgoing edges of nodes
         in Z. Delete every leaf node W which is not in sets of nodes X or Y or Z.
         """
-        bn_copy = deepcopy(self.bn)
 
-        BNReasoner.edge_pruning(bn_copy, Z)
-        BNReasoner.node_pruning(bn_copy, set.union(X, Y, Z))
+        br = self.deepcopy()  # create deep copy of self we can destructively edit
+
+        br._edge_pruning(Z)
+        br._node_pruning(set.union(X, Y, Z))
 
         # create list of paths
         paths = [(x, y_test) for x in X for y_test in Y]
@@ -78,7 +86,7 @@ class BNReasoner:
         for x, y in paths:
 
             # check whether x and y are not d-separated (i.e. there is a path)
-            if nx.has_path(nx.to_undirected(bn_copy.structure), x, y):
+            if nx.has_path(nx.to_undirected(br.bn.structure), x, y):
                 return False
 
         return True
@@ -95,30 +103,30 @@ class BNReasoner:
     posterior marginals
     """
 
-    def network_pruning(self, Q: MutableSet[str], e: Dict[str, str]) -> None:
+    def network_pruning(self, Q: MutableSet[str], e: Evidence) -> None:
         """
         Given a set of query variables Q and evidence e, simplify the network
         structure, so that queries of the form P(Q|E) can still be correctly
         calculated.
         """
+        # br = self.deepcopy()  # create deep copy of self we can destructively edit
 
-        bn_copy = deepcopy(self.bn)
-
+        e = dict(e)  # convert to dict for convenience below
         E = set(e.keys())
-        BNReasoner.edge_pruning(bn_copy, E)
+        self._edge_pruning(E)
 
         # implement factor reduction
         for key, value in e.items():
-            children = bn_copy.get_children(key)
+            children = self.bn.get_children(key)
 
             for child_node in children:
-                cpt = bn_copy.get_cpt(child_node)
+                cpt = self.bn.get_cpt(child_node)
                 cpt = cpt[cpt[key]] != value
 
                 # update the cpts in the BN
-                bn_copy.update_cpt(child_node, cpt)
+                self.bn.update_cpt(child_node, cpt)
 
-        BNReasoner.node_pruning(bn_copy, set.union(Q, E))
+        self._node_pruning(set.union(Q, E))
 
     @staticmethod
     def marginalize(
@@ -231,7 +239,6 @@ class BNReasoner:
             newi = dict()
             neighbors = list(ig.neighbors(var))
 
-            # TODO: this is wrong!
             for n1 in neighbors:
                 for n2 in neighbors:
                     key = ",".join(sorted([n1, n2]))  # e.g. "A,B"
@@ -294,19 +301,21 @@ class BNReasoner:
 
         :return a tuple containing a dictionary of assignments (for all variables in the network), and a probabilitity.
         """
-        net = deepcopy(self.bn)
+        br = self.deepcopy()  # create deep copy of self we can destructively edit
 
         all_vars = set(self.bn.get_all_variables())
 
         known_vars = set(list(e.keys()))
         Q = all_vars - known_vars  # list of unknown vars
 
-        net = BNReasoner.edge_pruning(net, known_vars)
+        br.network_pruning(Q, e)
+
+        # br = BNReasoner._edge_pruning(br, known_vars)
         # no node_pruning for MEP because Q + e = all_vars
         # net = BNReasoner.node_pruning(net, unknown_vars)
 
         # compute an ordering for variable removal
-        ordering = net.get_ordering(Q, method=ordering_method)  # Q or something else??
+        ordering = br.get_ordering(Q, method=ordering_method)  # Q or something else??
 
         # TODO do removals, computing new cpts (use extended factors somehow)...
         # also use BayesNet.reduce_factor and get_compatible_instantiations_table

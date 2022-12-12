@@ -1,4 +1,4 @@
-from tests.conftest import DOG_FILE, LEC1_FILE, compare_frames
+from tests.conftest import DOG_FILE, LEC1_FILE, LEC2_FILE, compare_frames
 from BNReasoner import BNReasoner, Ordering
 import pandas as pd
 from pandas.testing import assert_frame_equal
@@ -186,22 +186,62 @@ def test_multiply_factors():
 
 
 def test_network_pruning():
+    """This test corresponds to slide 'Example 1 - MPE'."""
 
-    Q = {"C", "B"}
-    e = {"D": "True"}
+    br = BNReasoner(LEC2_FILE)
+    orig = br.deepcopy()
 
-    res = BNReasoner.network_pruning(Q, e)
+    all_vars = set(br.bn.get_all_variables())
 
-    expected = pd.DataFrame(
-        {
-            "B": [True, True, False, False],
-            "C": [True, False, True, False],
-            "D": [True, True, True, True],
-            "p": [0.95, 0.9, 0.8, 1.0],
-        }
-    )
+    e = pd.Series({"J": True, "O": False})
 
-    assert res.equals(expected)
+    Q = all_vars - set(dict(e).keys())
+
+    # prune as if we're gonna do the MPE query
+    br.network_pruning(Q, e)
+
+    # all vars should still exist
+    assert set(br.bn.get_all_variables()) == all_vars
+
+    assert list(br.bn.structure.edges()) == [("I", "X"), ("Y", "O"), ("X", "O")]
+
+    # vars for which cpts should not have changed:
+    identical_cpts = {"I"}
+    for var in identical_cpts:
+        assert_frame_equal(br.bn.get_cpt(var), orig.bn.get_cpt(var))
+
+    expected_new_cpts = {
+        "J": pd.DataFrame(
+            {
+                "I": [True],
+                "p": [0.5],
+            }
+        ),
+        "Y": pd.DataFrame(
+            {
+                "Y": [False, True],
+                "p": [0.99, 0.01],
+            }
+        ),
+        "O": pd.DataFrame(
+            {
+                "X": [True, True, False, False],
+                "Y": [True, False, True, False],
+                "O": [False, False, False, False],
+                "p": [0.02, 0.02, 0.02, 0.98],
+            }
+        ),
+        "X": pd.DataFrame(
+            {
+                "X": [True, True, False, False],
+                "I": [True, False, True, False],
+                "p": [0.95, 0.05, 0.05, 0.95],
+            }
+        ),
+    }
+    for var, cpt in expected_new_cpts.items():
+        print(f"comparing cpts for var '{var}' before and after pruning")
+        assert_frame_equal(cpt, br.bn.get_cpt(var))
 
 
 def test_ordering__min_deg():
