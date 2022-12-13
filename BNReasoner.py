@@ -305,14 +305,16 @@ class BNReasoner:
         """
         ordered = self.get_ordering(vars, method)
 
-        for var in ordered:
-            root_cpt = self.bn.get_cpt(var)
+        for i, var in enumerate(ordered):
+
+            if i == 0:
+                cpt = self.bn.get_cpt(var)
 
             cpts = [self.bn.get_cpt(child) for child in self.bn.get_children(var)]
 
-            for cpt in cpts:
-                new_cpt = BNReasoner.multiply_factors(root_cpt, cpt)
-                new_cpt = BNReasoner.marginalize(new_cpt, var)
+            for t in cpts:
+                cpt = BNReasoner.multiply_factors(cpt, t)
+                cpt = BNReasoner.marginalize(cpt, var)
 
         return new_cpt
 
