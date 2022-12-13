@@ -25,6 +25,8 @@ def test_d_separation():
     res = br.d_separated(set(["bowel-problem"]), set(["light-on"]), set([]))
     assert res == True
 
+    # TODO: add some "harder" examples on other networks
+
 
 FACTOR_EX1 = pd.DataFrame(
     {
@@ -200,9 +202,7 @@ def test_network_pruning():
     # prune as if we're gonna do the MPE query
     br.network_pruning(Q, e)
 
-    # all vars should still exist
-    assert set(br.bn.get_all_variables()) == all_vars
-
+    assert set(br.bn.get_all_variables()) == all_vars, "all vars should still exist"
     assert list(br.bn.structure.edges()) == [("I", "X"), ("Y", "O"), ("X", "O")]
 
     # vars for which cpts should not have changed:
@@ -213,7 +213,7 @@ def test_network_pruning():
     expected_new_cpts = {
         "J": pd.DataFrame(
             {
-                "I": [True],
+                "J": [True],
                 "p": [0.5],
             }
         ),
@@ -225,23 +225,27 @@ def test_network_pruning():
         ),
         "O": pd.DataFrame(
             {
-                "X": [True, True, False, False],
-                "Y": [True, False, True, False],
+                "Y": [False, False, True, True],
+                "X": [False, True, False, True],
                 "O": [False, False, False, False],
-                "p": [0.02, 0.02, 0.02, 0.98],
+                "p": [0.98, 0.02, 0.02, 0.02],
             }
         ),
         "X": pd.DataFrame(
             {
-                "X": [True, True, False, False],
-                "I": [True, False, True, False],
+                "I": [False, False, True, True],
+                "X": [False, True, False, True],
                 "p": [0.95, 0.05, 0.05, 0.95],
             }
         ),
     }
-    for var, cpt in expected_new_cpts.items():
+    for var, expected in expected_new_cpts.items():
         print(f"comparing cpts for var '{var}' before and after pruning")
-        assert_frame_equal(cpt, br.bn.get_cpt(var))
+        # (don't check dtype cause type(bool) != type(np.bool))
+        # (also ignore order of columns)
+        cpt = br.bn.get_cpt(var)
+        assert_frame_equal(expected, cpt, check_dtype=False, check_like=True)
+        # compare_frames(cpt, br.bn.get_cpt(var))
 
 
 def test_ordering__min_deg():

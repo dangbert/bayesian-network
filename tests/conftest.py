@@ -37,6 +37,7 @@ def compare_frames(f1: pd.DataFrame, f2: pd.DataFrame):
     """
     Assert two dataframes are equivalent.
     Created this because f1.equals(f2) seems to incorrectly return False for marginalization tests.
+    ^Probably cause of bool vs np.bool dtypes
     """
     same = False
 

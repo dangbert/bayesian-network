@@ -53,6 +53,7 @@ class BNReasoner:
         """
         nodes = self.bn.get_all_variables()
 
+        # (this probably doesn't need to be a loop)
         while True:
             leaf_nodes = [
                 node
@@ -111,21 +112,28 @@ class BNReasoner:
         """
         # br = self.deepcopy()  # create deep copy of self we can destructively edit
 
-        e = dict(e)  # convert to dict for convenience below
         E = set(e.keys())
+
+        # perform factor reduction on all child cpts
+        for var, value in e.items():
+            children = self.bn.get_children(var)
+
+            for child_var in children:
+                cpt = self.bn.get_cpt(child_var)
+                # zero out rows where var != E[var]:
+                new_cpt = BayesNet.reduce_factor(e, deepcopy(cpt))
+                # sum out var:
+                new_cpt = BNReasoner.marginalize(new_cpt, var)
+                self.bn.update_cpt(child_var, new_cpt)
+
+            # also filter down rows of var (and reset index to play nice with tests)
+            cpt = self.bn.get_cpt(var)
+            cpt = (cpt[cpt[var] == value]).reset_index(drop=True)
+            self.bn.update_cpt(var, cpt)
+
+        # remove outgoing edges from vars in E
         self._edge_pruning(E)
-
-        # implement factor reduction
-        for key, value in e.items():
-            children = self.bn.get_children(key)
-
-            for child_node in children:
-                cpt = self.bn.get_cpt(child_node)
-                cpt = cpt[cpt[key]] != value
-
-                # update the cpts in the BN
-                self.bn.update_cpt(child_node, cpt)
-
+        # remove any leaf nodes not appearing in Q or e
         self._node_pruning(set.union(Q, E))
 
     @staticmethod
@@ -135,7 +143,6 @@ class BNReasoner:
     ):
         """
         Given a factor and a variable X, compute the CPT in which X is summed-out.
-        TODO: may not work for higher dimensional factors
 
         :param f: the factor to maginalize.
         :param X: name of the variable to sum out.
