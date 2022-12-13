@@ -339,4 +339,4 @@ def test_variable_elim():
         }
     )
 
-    assert_frame_equal(res, expected)
+    assert_frame_equal(expected, res, check_dtype=False)

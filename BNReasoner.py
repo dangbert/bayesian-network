@@ -362,7 +362,7 @@ class BNReasoner:
         """
         all_vars = set(self.bn.get_all_variables()) - Q
 
-        summed_out = self.variable_elimination(all_vars, method = ordering_method)
+        summed_out = self.variable_elimination(all_vars, method=ordering_method)
 
         for i, q in enumerate(Q):
             if i == 0:
@@ -370,6 +370,6 @@ class BNReasoner:
 
             else:
                 maxed_out = self.max_out(maxed_out, q)
-        '''TODO: in max_out keep track of value so we can call it here'''
+        """TODO: in max_out keep track of value so we can call it here"""
 
-        return f'The MAP of of {Q} is given {e} is {'not yet resolved'}'
+        return f"The MAP of of {Q} is given {e} is {'not yet resolved'}'"
