@@ -316,7 +316,7 @@ def test_variable_elim():
                 {
                     "A": [True, True, False, False],
                     "B": [True, False, True, False],
-                    "p": [0.9, 1, 0.2, 0.8],
+                    "p": [0.9, 0.1, 0.2, 0.8],
                 }
             ),
             "C": pd.DataFrame(

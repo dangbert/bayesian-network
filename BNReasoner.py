@@ -309,12 +309,15 @@ class BNReasoner:
 
             if i == 0:
                 cpt = self.bn.get_cpt(var)
+            # print('step 1', cpt)
 
             cpts = [self.bn.get_cpt(child) for child in self.bn.get_children(var)]
 
             for t in cpts:
                 cpt = BNReasoner.multiply_factors(cpt, t)
+                # print('after multiplied', cpt)
                 cpt = BNReasoner.marginalize(cpt, var)
+                # print('after summed out', cpt)
 
         return cpt
 
