@@ -316,7 +316,7 @@ class BNReasoner:
                 cpt = BNReasoner.multiply_factors(cpt, t)
                 cpt = BNReasoner.marginalize(cpt, var)
 
-        return new_cpt
+        return cpt
 
     def MPE(
         self, e: Evidence, ordering_method=Ordering.MIN_DEG
