@@ -354,10 +354,22 @@ class BNReasoner:
         self, Q: MutableSet[str], e: Evidence, ordering_method=Ordering.MIN_DEG
     ) -> Tuple[Evidence, float]:
         """
-        Compute the maximum a-posteriory instantiation + value of query variables Q given (possibly empty) evidence e.
+        Compute the maximum a-posteriori instantiation + value of query variables Q given (possibly empty) evidence e.
 
         :param Q: a set of variable names being queried.
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
-        pass
+        all_vars = set(self.bn.get_all_variables()) - Q
+
+        summed_out = self.variable_elimination(all_vars, method = ordering_method)
+
+        for i, q in enumerate(Q):
+            if i == 0:
+                maxed_out = BNReasoner.max_out(summed_out, q)
+
+            else:
+                maxed_out = self.max_out(maxed_out, q)
+        '''TODO: in max_out keep track of value so we can call it here'''
+
+        return f'The MAP of of {Q} is given {e} is {'not yet resolved'}'
