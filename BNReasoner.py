@@ -121,7 +121,7 @@ class BNReasoner:
             for child_var in children:
                 cpt = self.bn.get_cpt(child_var)
                 # zero out rows where var != E[var]:
-                new_cpt = BayesNet.reduce_factor(e, deepcopy(cpt))
+                new_cpt = BayesNet.reduce_factor(e, cpt)
                 # sum out var:
                 new_cpt = BNReasoner.marginalize(new_cpt, var)
                 self.bn.update_cpt(child_var, new_cpt)
@@ -131,7 +131,7 @@ class BNReasoner:
             cpt = (cpt[cpt[var] == value]).reset_index(drop=True)
             self.bn.update_cpt(var, cpt)
 
-        '''TODO: edge_pruning needs (?) to come before reduce factor'''
+        """TODO: edge_pruning needs (?) to come before reduce factor"""
         # remove outgoing edges from vars in E
         self._edge_pruning(E)
         # remove any leaf nodes not appearing in Q or e
@@ -299,14 +299,14 @@ class BNReasoner:
 
         return ordering
 
-    def variable_elimination(self, vars: MutableSet[str], heuristic = 'MIN_DEG'):
+    def variable_elimination(self, vars: MutableSet[str], method=Ordering.MIN_DEG):
         """
         Sum out a given set of variables by using variable elimination.
         """
-        ordered = BNReasoner.get_ordering(vars, heuristic)
+        ordered = self.get_ordering(vars, method)
 
         for var in ordered:
-            root_cpt  = self.bn.get_cpt(var)
+            root_cpt = self.bn.get_cpt(var)
 
             cpts = [self.bn.get_cpt(child) for child in self.bn.get_children(var)]
 

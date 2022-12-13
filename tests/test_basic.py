@@ -1,5 +1,6 @@
 from tests.conftest import DOG_FILE, LEC1_FILE, LEC2_FILE, compare_frames
 from BNReasoner import BNReasoner, Ordering
+from BayesNet import BayesNet
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import copy
@@ -244,7 +245,7 @@ def test_network_pruning():
         # (don't check dtype cause type(bool) != type(np.bool))
         # (also ignore order of columns)
         cpt = br.bn.get_cpt(var)
-        assert_frame_equal(expected, cpt, check_dtype=False, check_like=True)
+        assert_frame_equal(expected, cpt, check_dtype=False)
         # compare_frames(cpt, br.bn.get_cpt(var))
 
 
@@ -296,33 +297,40 @@ def test_ordering__min_fill():
     res = br.get_ordering(remove_vars, method=Ordering.MIN_FILL)
     assert res == ["Rain?"]
 
+
 def test_variable_elim():
-    '''Taken from slide 18 Lecture 3.'''
+    """Taken from slide 18 Lecture 3."""
 
-    cpt_1 = pd.DataFrame(
+    bn = BayesNet()
+    bn.create_bn(
+        ["A", "B", "C"],
+        [("A", "B"), ("B", "C")],
         {
-            "B": [True, True, False, False],
-            "C": [True, False, True, False],
-            "p": [0.3, 0.7, 0.5, 0.5],
-        }
+            "A": pd.DataFrame(
+                {
+                    "A": [True, False],
+                    "p": [0.6, 0.4],
+                }
+            ),
+            "B": pd.DataFrame(
+                {
+                    "A": [True, True, False, False],
+                    "B": [True, False, True, False],
+                    "p": [0.9, 1, 0.2, 0.8],
+                }
+            ),
+            "C": pd.DataFrame(
+                {
+                    "B": [True, True, False, False],
+                    "C": [True, False, True, False],
+                    "p": [0.3, 0.7, 0.5, 0.5],
+                }
+            ),
+        },
     )
-
-    cpt_2 = pd.DataFrame(
-        {
-            "A": [True, True, False, False],
-            "B": [True, False, True, False],
-            "p": [0.9, 1, 0.2, 0.8],
-        }
-    )
-
-    cpt_3 = pd.DataFrame(
-        {
-            "A": [True, False],
-            "p": [0.6, 0.4],
-        }
-    )
+    br = BNReasoner(bn)
     vars = {"A", "B"}
-    res = BNReasoner.variable_elimination(vars)
+    res = br.variable_elimination(vars)
 
     expected = pd.DataFrame(
         {
@@ -331,4 +339,4 @@ def test_variable_elim():
         }
     )
 
-    assert res.equals(expected)
+    assert_frame_equal(res, expected)
