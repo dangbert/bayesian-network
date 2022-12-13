@@ -42,3 +42,107 @@ def test_MAP():
     assert prob == 0.242720
 
     # TODO: add test from workgroup?
+
+def test_variable_elim__simple():
+    """Taken from slide 18 Lecture 3."""
+
+    bn = BayesNet()
+    bn.create_bn(
+        ["A", "B", "C"],
+        [("A", "B"), ("B", "C")],
+        {
+            "A": pd.DataFrame(
+                {
+                    "A": [True, False],
+                    "p": [0.6, 0.4],
+                }
+            ),
+            "B": pd.DataFrame(
+                {
+                    "A": [True, True, False, False],
+                    "B": [True, False, True, False],
+                    "p": [0.9, 0.1, 0.2, 0.8],
+                }
+            ),
+            "C": pd.DataFrame(
+                {
+                    "B": [True, True, False, False],
+                    "C": [True, False, True, False],
+                    "p": [0.3, 0.7, 0.5, 0.5],
+                }
+            ),
+        },
+    )
+    br = BNReasoner(bn)
+    vars = {"A", "B"}
+    res = br.variable_elimination(vars)
+
+    expected = pd.DataFrame(
+        {
+            "C": [True, False],
+            "p": [0.376, 0.624],
+        }
+    )
+
+    assert_frame_equal(expected, res, check_dtype=False)
+
+
+def test_variable_elim__map():
+    """Taken from slide 20 Lecture 4."""
+
+    bn= BayesNet()
+    bn.create_bn(
+        ["I", "J", "Y", "X", "Y"],
+        [("I", "X"), ("X", "O"), ("J", "X"), ("J", "Y"), ("Y", "O")],
+        {
+            "I": pd.DataFrame(
+                {
+                    "I": [True, False],
+                    "p": [0.5, 0.5],
+                }
+            ),
+            "J": pd.DataFrame(
+                {
+                    "J": [True, False],
+                    "p": [0.5, 0.5],
+                }
+            ),
+            "Y": pd.DataFrame(
+                {
+                    "J": [True, True, False, False],
+                    "Y": [True, False, True, False],
+                    "p": [0.01, 0.99, 0.99, 0.01],
+                }
+            ),
+            "X": pd.DataFrame(
+                {
+                    "I": [True, True, True, True, False, False, False, False],
+                    "J": [True, True, False, False, True, True, False, False],
+                    "X": [True, False, True, False, True, False, True, False],
+                    "p": [0.95, 0.05, 0.05, 0.95, 0.05, 0.95, 0.05, 0.95],
+                }
+            ),
+            "O": pd.DataFrama(
+                {
+                    "X": [True, True, True, True, False, False, False, False],
+                    "Y": [True, True, False, False, True, True, False, False],
+                    "O" [True, False, True, False, True, False, True, False],
+                    "p": [0.98, 0.02, 0.98, 0.02, 0.98, 0.02, 0.02, 0.98],
+                }
+            ),
+        },
+    )
+
+    br = BNReasoner(bn)
+    vars = {"O", "Y", "X"}
+    res = br.variable_elimination(vars)
+
+    expected = pd.DataFrame(
+        {
+            "I": [True, True, False, False],
+            "J": [True, False, True, False],
+            "p": [0.93248, 0.97088, 0.07712, 0.97088],
+        }
+    )
+
+    assert_frame_equal(expected, res, check_dtype=False)
