@@ -131,6 +131,7 @@ class BNReasoner:
             cpt = (cpt[cpt[var] == value]).reset_index(drop=True)
             self.bn.update_cpt(var, cpt)
 
+        '''TODO: edge_pruning needs (?) to come before reduce factor'''
         # remove outgoing edges from vars in E
         self._edge_pruning(E)
         # remove any leaf nodes not appearing in Q or e
@@ -297,6 +298,23 @@ class BNReasoner:
             raise ValueError(f"ordering method not implemented '{method}'")
 
         return ordering
+
+    def variable_elimination(self, vars: MutableSet[str], heuristic = 'MIN_DEG'):
+        """
+        Sum out a given set of variables by using variable elimination.
+        """
+        ordered = BNReasoner.get_ordering(vars, heuristic)
+
+        for var in ordered:
+            root_cpt  = self.bn.get_cpt(var)
+
+            cpts = [self.bn.get_cpt(child) for child in self.bn.get_children(var)]
+
+            for cpt in cpts:
+                new_cpt = BNReasoner.multiply_factors(root_cpt, cpt)
+                new_cpt = BNReasoner.marginalize(new_cpt, var)
+
+        return new_cpt
 
     def MPE(
         self, e: Evidence, ordering_method=Ordering.MIN_DEG
