@@ -126,7 +126,7 @@ def test_variable_elim__map():
                 {
                     "X": [True, True, True, True, False, False, False, False],
                     "Y": [True, True, False, False, True, True, False, False],
-                    "O" [True, False, True, False, True, False, True, False],
+                    "O": [True, False, True, False, True, False, True, False],
                     "p": [0.98, 0.02, 0.98, 0.02, 0.98, 0.02, 0.02, 0.98],
                 }
             ),
