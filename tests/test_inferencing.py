@@ -1,4 +1,5 @@
 from BNReasoner import BNReasoner, Ordering
+from BayesNet import BayesNet
 import pandas as pd
 from pandas.testing import assert_frame_equal
 from tests.conftest import LEC2_FILE
@@ -42,6 +43,7 @@ def test_MAP():
     assert prob == 0.242720
 
     # TODO: add test from workgroup?
+
 
 def test_variable_elim__simple():
     """Taken from slide 18 Lecture 3."""
@@ -90,50 +92,7 @@ def test_variable_elim__simple():
 def test_variable_elim__map():
     """Taken from slide 20 Lecture 4."""
 
-    bn= BayesNet()
-    bn.create_bn(
-        ["I", "J", "Y", "X", "Y"],
-        [("I", "X"), ("X", "O"), ("J", "X"), ("J", "Y"), ("Y", "O")],
-        {
-            "I": pd.DataFrame(
-                {
-                    "I": [True, False],
-                    "p": [0.5, 0.5],
-                }
-            ),
-            "J": pd.DataFrame(
-                {
-                    "J": [True, False],
-                    "p": [0.5, 0.5],
-                }
-            ),
-            "Y": pd.DataFrame(
-                {
-                    "J": [True, True, False, False],
-                    "Y": [True, False, True, False],
-                    "p": [0.01, 0.99, 0.99, 0.01],
-                }
-            ),
-            "X": pd.DataFrame(
-                {
-                    "I": [True, True, True, True, False, False, False, False],
-                    "J": [True, True, False, False, True, True, False, False],
-                    "X": [True, False, True, False, True, False, True, False],
-                    "p": [0.95, 0.05, 0.05, 0.95, 0.05, 0.95, 0.05, 0.95],
-                }
-            ),
-            "O": pd.DataFrama(
-                {
-                    "X": [True, True, True, True, False, False, False, False],
-                    "Y": [True, True, False, False, True, True, False, False],
-                    "O": [True, False, True, False, True, False, True, False],
-                    "p": [0.98, 0.02, 0.98, 0.02, 0.98, 0.02, 0.02, 0.98],
-                }
-            ),
-        },
-    )
-
-    br = BNReasoner(bn)
+    br = BNReasoner(LEC2_FILE)
     vars = {"O", "Y", "X"}
     res = br.variable_elimination(vars)
 

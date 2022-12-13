@@ -309,17 +309,17 @@ class BNReasoner:
 
             if i == 0:
                 cpt = self.bn.get_cpt(var)
-            print('step 1', cpt)
+            print(f"\nstep {i}\n{cpt}")
 
             cpts = [self.bn.get_cpt(child) for child in self.bn.get_children(var)]
 
             for t in cpts:
                 cpt = BNReasoner.multiply_factors(cpt, t)
-                print('after multiplied', cpt)
+                print(f"after multiplied\n{cpt}")
                 cpt = BNReasoner.marginalize(cpt, var)
-                print('after summed out', cpt)
+                print(f"after summed out\n{cpt}")
 
-        print('final_cpt', cpt)
+        print(f"final_cpt:\n {cpt}")
         return cpt
 
     def MPE(
