@@ -45,6 +45,12 @@ class BNReasoner:
         """
         return [p for p in nx.predecessors(var)]
 
+    def non_queried_variables(self, Q: MutableSet[str] -> List[str]:
+        """
+        Returns a list of all variables in the graph excluding queried variables.
+        """
+        return [v for v in self.bn.get_all_variables() if v not in Q]
+
     def _edge_pruning(self, Z: MutableSet[str]) -> None:
         """
         Delete all outgoing edges in network from nodes Z.
@@ -112,8 +118,10 @@ class BNReasoner:
         """
         return self.d_separated(X, Y, Z)
 
-    def factor_reduction(self, e: Evidence) -> None:
-
+    def _apply_evidence(self, e: Evidence) -> None:
+        """
+        Update CPTs based on evidence.
+        """
         # perform factor reduction on all child cpts
         for var, value in e.items():
             children = self.bn.get_children(var)
@@ -138,28 +146,14 @@ class BNReasoner:
         calculated.
         """
         # br = self.deepcopy()  # create deep copy of self we can destructively edit
-
         E = set(e.keys())
 
-        # perform factor reduction on all child cpts
-        for var, value in e.items():
-            children = self.bn.get_children(var)
-
-            for child_var in children:
-                cpt = self.bn.get_cpt(child_var)
-                # zero out rows where var != E[var]:
-                new_cpt = BayesNet.reduce_factor(e, cpt)
-                # sum out var:
-                new_cpt = BNReasoner.marginalize(new_cpt, var)
-                self.bn.update_cpt(child_var, new_cpt)
-
-            # also filter down rows of var (and reset index to play nice with tests)
-            cpt = self.bn.get_cpt(var)
-            cpt = (cpt[cpt[var] == value]).reset_index(drop=True)
-            self.bn.update_cpt(var, cpt)
+        # perform factor reduction
+        self._apply_evidence(e)
 
         # remove outgoing edges from vars in E
         self._edge_pruning(E)
+
         # remove any leaf nodes not appearing in Q or e
         self._node_pruning(set.union(Q, E))
 
@@ -326,11 +320,12 @@ class BNReasoner:
 
         return ordering
 
-    def variable_elimination(self, vars: MutableSet[str], method=Ordering.MIN_DEG) -> pd.DataFrame:
+    def variable_elimination(self, Q: MutableSet[str], method=Ordering.MIN_DEG) -> pd.DataFrame:
         """
-        Sum out a given set of variables by using variable elimination.
+        Sum out a given set of variables by using variable elimination. Calculate
+        and return prior marginal.
         """
-        ordered = self.get_ordering(vars, method)
+        ordered = self.get_ordering(BNReasoner.non_queried_variables(Q), method)
 
         for i, var in enumerate(ordered):
 
@@ -343,8 +338,9 @@ class BNReasoner:
             for t in cpts:
                 cpt = BNReasoner.multiply_factors(cpt, t)
                 print(f"after multiplied\n{cpt}")
-                cpt = BNReasoner.marginalize(cpt, var)
-                print(f"after summed out\n{cpt}")
+
+            cpt = BNReasoner.marginalize(cpt, var)
+            print(f"after summed out\n{cpt}")
 
         print(f"final_cpt:\n {cpt}")
         return cpt
@@ -357,22 +353,19 @@ class BNReasoner:
 
         :returns: dataframe containing P(not Q|e) and P(Q|e)
         """
-        vars = self.bn.get_all_variables() - Q
-
-        # TODO: not sure about if statement at this point
         # reduce all factors w.r.t. e
-        if not e.empty:
-            BNReasoner.factor_reduction(e)
+        BNReasoner._apply_evidence(e)
+
+        vars = BNReasoner.non_queried_variables(Q)
+        # TODO: what if  Q = X?
 
         # compute joint marginal PR (Q & e) via variable elim
         joint_marginal = BNReasoner.variable_elimination(vars, ordering_method)
 
         if not e.empty:
-        # sum out C to get probability of e and use it to normalize to obtain Pr(Q, e)
-            prob_e = joint_marginal['p'].sum()
 
-            # TODO: what if  Q = X?
-            # prob_e = BNReasoner.marginalize(cpt, var)
+            # sum out C to get probability of e and use it to normalize to obtain Pr(Q, e)
+            prob_e = joint_marginal['p'].sum()
 
             joint_marginal['p'] = joint_marginal['p'].div(prob_e)
 
@@ -417,19 +410,22 @@ class BNReasoner:
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
-        all_vars = set(self.bn.get_all_variables()) - Q
+        all_vars = BNReasoner.non_queried_variables(Q)
 
-        # TODO
-        predecessors = self.get_predecessors(e.index)
+        # step 1: reduce w.r.t. to e
+        BNReasoner._apply_evidence(e)
 
-        summed_out = self.variable_elimination(all_vars, method=ordering_method)
+        # step 2: repeatedly multiply and sum out
+        map = BNReasoner.variable_elimination(all_vars, method=ordering_method)
 
+        # step 3: max out Q
         for i, q in enumerate(Q):
             if i == 0:
-                maxed_out = BNReasoner.max_out(summed_out, q)
+                maxed_out = BNReasoner.max_out(map, q)
 
             else:
                 maxed_out = self.max_out(maxed_out, q)
+                
         """TODO: in max_out keep track of value so we can call it here"""
 
         return f"The MAP of of {Q} is given {e} is {'not yet resolved'}'"
