@@ -353,12 +353,12 @@ class BNReasoner:
 
             # sum out
             res = BNReasoner.marginalize(res, var)
-            print(f"after summed out\n{res}")
+            # print(f"after summed out\n{res}")
 
             # update list of remaining cpts
             all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
 
-        print(f"final_cpt:\n {cpt}")
+        # print(f"final_cpt:\n {cpt}")
         return res
         # TODO: actually return this:
         return [res] + all_cpts

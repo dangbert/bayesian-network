@@ -1,4 +1,7 @@
-# create a random network and output it to a bifxml file.
+"""
+Creates random bayesian networks and outputs them to a bifxml file.
+"""
+import os
 import numpy as np
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
@@ -6,8 +9,19 @@ from pgmpy.models import BayesianNetwork
 from pgmpy.readwrite import XMLBIFWriter, XMLBIFReader
 import networkx as nx
 
+from BayesNet import BayesNet
+import matplotlib.pyplot as plt
+from BNReasoner import BNReasoner
+from examples import visualize
+from typing import Dict
 
-def get_random(n_nodes=5, edge_prob=0.5, n_states=None, latents=False):
+
+def get_random_model(
+    n_nodes: int = 5,
+    edge_prob: float = 0.5,
+    n_states: Dict = None,
+    latents: bool = False,
+):
     """
 
     Based on https://github.com/pgmpy/pgmpy/blob/dev/pgmpy/models/BayesianNetwork.py#L1063
@@ -71,31 +85,22 @@ def DAG_get_random(n_nodes=5, edge_prob=0.5, latents=False):
     return dag
 
 
-from BayesNet import BayesNet
-import matplotlib.pyplot as plt
-from BNReasoner import BNReasoner
-
-
-def visualize(br: BNReasoner, show_cpts=True):
-
-    br.bn.draw_structure()
-    int_graph = br.bn.get_interaction_graph()
-
-    if show_cpts:
-        print("all cpts:")
-        cpts = br.bn.get_all_cpts()
-        for k, cpt in cpts.items():
-            print(f"{k}")
-            print(cpt)
-
-    nx.draw(int_graph, with_labels=True)
-    plt.show()
+def get_random_br(fname: str, args: Dict) -> BayesNet:
+    model = get_random_model(**args)
+    XMLBIFWriter(model).write_xmlbif(fname)
+    assert fname.endswith(".bifxml")
+    assert os.path.exists(fname)
+    return BNReasoner(fname)
 
 
 if __name__ == "__main__":
+    # br = BNReasoner("random.bifxml")
+    # visualize(br)
+    # exit(0)
+
     # model = BayesianNetwork.get_random(n_nodes=5)
 
-    model = get_random(n_nodes=20, edge_prob=0.5, n_states=2)
+    model = get_random_model(n_nodes=20, edge_prob=0.5, n_states=2)
     fname = "random.bifxml"
     XMLBIFWriter(model).write_xmlbif(fname)
     print(f"wrote {fname}")

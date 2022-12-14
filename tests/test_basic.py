@@ -136,6 +136,9 @@ def test_marginalization():
 def test_maxing_out():
     cpt = copy.deepcopy(FACTOR_EX3)
     res = BNReasoner.max_out(cpt, "D")
+
+    # TODO: max_out should return a pd.Series() of the instantations for each row in the result
+    # ins = pd.Series([{}, {}, {}])
     expected = pd.DataFrame(
         {
             "B": [True, True, False, False],
