@@ -410,13 +410,13 @@ class BNReasoner:
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
-        all_vars = BNReasoner.non_queried_variables(Q)
+        all_vars = self.non_queried_variables(Q)
 
         # step 1: reduce w.r.t. to e
-        BNReasoner._apply_evidence(e)
+        self._apply_evidence(e)
 
         # step 2: repeatedly multiply and sum out
-        map = BNReasoner.variable_elimination(all_vars, method=ordering_method)
+        map = self.variable_elimination(all_vars, method=ordering_method)
 
         # step 3: max out Q
         for i, q in enumerate(Q):
@@ -425,7 +425,7 @@ class BNReasoner:
 
             else:
                 maxed_out = self.max_out(maxed_out, q)
-                
+
         """TODO: in max_out keep track of value so we can call it here"""
 
         return f"The MAP of of {Q} is given {e} is {'not yet resolved'}'"
