@@ -118,10 +118,14 @@ class BNReasoner:
         """
         return self.d_separated(X, Y, Z)
 
-    def _apply_evidence(self, e: Evidence) -> None:
+    def _apply_evidence(self, e: Evidence, condition: bool = False) -> None:
         """
-        Update CPTs based on evidence.
+        Update CPTs (in place) based on evidence.
+        TODO: rename condition variable to something better!!!
         """
+        if e.empty:
+            return
+
         # perform factor reduction on all child cpts
         for var, value in e.items():
             children = self.bn.get_children(var)
@@ -131,7 +135,11 @@ class BNReasoner:
                 # zero out rows where var != E[var]:
                 new_cpt = BayesNet.reduce_factor(e, cpt)
                 # sum out var:
-                new_cpt = BNReasoner.marginalize(new_cpt, var)
+                if condition:
+                    new_cpt = BayesNet.get_compatible_instantiations_table(e, new_cpt)
+                else:
+                    new_cpt = BNReasoner.marginalize(new_cpt, var)
+
                 self.bn.update_cpt(child_var, new_cpt)
 
             # also filter down rows of var (and reset index to play nice with tests)
@@ -362,23 +370,24 @@ class BNReasoner:
         Given query variables Q and possibly empty evidence e, compute the marginal
         distribution P(Q|e). Note that Q is a subset of the variables in the Bayesian
         network X with Q ⊂ X but can also be Q = X.
+        Note when evidence is empty, we are getting the "prior marginal probability"
 
         :returns: dataframe containing P(not Q|e) and P(Q|e)
         """
         # reduce all factors w.r.t. e
-        self._apply_evidence(e)
+        self._apply_evidence(e, condition=True)
 
-        vars = self._non_queried_variables(Q)
-        # TODO: what if  Q = X?
+        # TODO: what if  Q = X? (add test for this)
 
         # compute joint marginal PR (Q & e) via variable elim
-        joint_marginal = self.variable_elimination(vars, ordering_method)
+        joint_marginal = self.variable_elimination(Q, ordering_method)
 
         if not e.empty:
 
-            # sum out C to get probability of e and use it to normalize to obtain Pr(Q, e)
+            # sum out C to get probability of e
             prob_e = joint_marginal["p"].sum()
-
+            # "normalize" to obtain Pr(Q, e) (see "Posterior Marginal" slides)
+            #   cause for Bayes theorem you have to divide by p(e)
             joint_marginal["p"] = joint_marginal["p"].div(prob_e)
 
         return joint_marginal

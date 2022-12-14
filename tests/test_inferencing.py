@@ -27,7 +27,7 @@ df_c = pd.DataFrame(
 )
 
 
-def test_marginal_dist():
+def test_marginal_dist__posterior():
     """
     This test corresponds to slide 7-9 Lecture 4.
     """
@@ -53,11 +53,48 @@ def test_marginal_dist():
             "p": [0.32, 0.68],
         }
     )
-
     assert_frame_equal(expected, res, check_dtype=False)
 
 
-def test_MEP():
+def test_marginal_dist__prior():
+    """
+    Test marginal_dist when evidence is empty
+    (i.e. get "prior marginal" prob of B).
+    See slides on "Variable Elimination"
+    """
+    BN_ABC = BayesNet()
+    BN_ABC.create_bn(
+        ["A", "B", "C"],
+        [("A", "B"), ("B", "C")],
+        {
+            "A": copy.deepcopy(df_a),
+            "B": copy.deepcopy(df_b),
+            "C": copy.deepcopy(df_c),
+        },
+    )
+
+    br = BNReasoner(copy.deepcopy(BN_ABC))
+    res = br.marginal_distribution({"C"}, pd.Series({}))
+    expected = pd.DataFrame(
+        {
+            "C": [True, False],
+            "p": [0.376, 0.624],
+        }
+    )
+    assert_frame_equal(expected, res, check_dtype=False)
+
+    br = BNReasoner(copy.deepcopy(BN_ABC))
+    res = br.marginal_distribution({"B"}, pd.Series({}))
+    expected = pd.DataFrame(
+        {
+            "B": [True, False],
+            "p": [0.62, 0.38],
+        }
+    )
+    assert_frame_equal(expected, res, check_dtype=False)
+
+
+def test_MPE():
     """This test corresponds to slide 'Example 1 - MPE'."""
     br = BNReasoner(LEC2_FILE)
     e = pd.Series({"J": True, "O": False})
