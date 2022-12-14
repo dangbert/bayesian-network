@@ -206,7 +206,7 @@ class BNReasoner:
         return deepcopy(cpt)  # just in case
 
     @staticmethod
-    def max_out(f: pd.DataFrame, X: str):
+    def maxing_out(f: pd.DataFrame, X: str):
         """
         Given a factor and a variable X, compute the CPT in which X is maxed-out.
         Keep track of which instantiation of X led to the maximized value.
@@ -236,6 +236,24 @@ class BNReasoner:
         cpt.reindex()
         cpt = cpt.reset_index(drop=True)
         return cpt
+
+    @staticmethod
+    def max_out(f: pd.DataFrame, X: str) -> pd.DataFrame:
+
+        vars = [v for v in f.columns if v not in set([X, "p"])]
+
+        cpt = f.groupby(vars).max().reset_index()
+        print(cpt)
+
+        # keep track of instantiations
+        extended = cpt.iloc[:,-2]
+        print(extended)
+
+
+        # remove X column from dataframe
+        cpt = cpt.drop(X, axis=1)
+
+        return cpt, extended
 
     @staticmethod
     def multiply_factors(f: pd.DataFrame, g: pd.DataFrame):
@@ -353,12 +371,12 @@ class BNReasoner:
 
             # sum out
             res = BNReasoner.marginalize(res, var)
-            print(f"after summed out\n{res}")
+            #print(f"after summed out\n{res}")
 
             # update list of remaining cpts
             all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
 
-        print(f"final_cpt:\n {cpt}")
+        #print(f"final_cpt:\n {cpt}")
         return res
         # TODO: actually return this:
         return [res] + all_cpts
@@ -431,22 +449,24 @@ class BNReasoner:
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
-        all_vars = self._non_queried_variables(Q)
-
         # step 1: reduce w.r.t. to e
         self._apply_evidence(e)
 
         # step 2: repeatedly multiply and sum out
-        map = self.variable_elimination(all_vars, method=ordering_method)
+        map = self.variable_elimination(Q, ordering_method)
+        # print('map', map)
+
+        all_cpts = list(self.bn.get_all_cpts().values())
 
         # step 3: max out Q
-        for i, q in enumerate(Q):
-            if i == 0:
-                maxed_out = BNReasoner.max_out(map, q)
+        for i, var in enumerate(Q):
+            cpt = self.bn.get_cpt(var)
+            map = self.multiply_factors(map, cpt)
+            map = self.max_out(map, var)
+            # print('map', map)
+            # print(isinstance(map, pd.DataFrame))
 
-            else:
-                maxed_out = self.max_out(maxed_out, q)
+        return map
 
         """TODO: in max_out keep track of value so we can call it here"""
 
-        return f"The MAP of of {Q} is given {e} is {'not yet resolved'}'"
