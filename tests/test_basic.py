@@ -134,40 +134,47 @@ def test_marginalization():
 
 
 def test_maxing_out():
+    # TEST 1
     cpt = copy.deepcopy(FACTOR_EX3)
     res, assignments = BNReasoner.max_out(cpt, "D")
     expected_res = pd.DataFrame(
         {
-            "B": [True, True, False, False],
-            "C": [True, False, True, False],
-            "p": [0.95, 0.9, 0.8, 1.0],
+            "B": [False, False, True, True],
+            "C": [False, True, False, True],
+            "p": [1.0, 0.8, 0.9, 0.95],
         }
     )
     expected_assignments = pd.Series([True, True, True, True], name='D')
-    #assert res.equals(expected_res, expected_assignments)
-    #import pdb; pdb.set_trace()
+    assert_frame_equal(res, expected_res)
     assert_series_equal(assignments, expected_assignments)
 
-    '''res, assignments = BNReasoner.max_out(cpt, "D")
+    # TEST 2
     cpt = copy.deepcopy(FACTOR_EX1)
-
-    expected = pd.DataFrame(
+    res, asn = BNReasoner.max_out(cpt, "hear-bark")
+    expected_res = pd.DataFrame(
         {
             "dog-out": [False, True],
             "p": [0.7, 0.99],
         }
     )
-    res, assignments = BNReasoner.max_out(cpt, "hear-bark")
-    assert res.equals(expected)
+    expected_assignments = pd.Series([], name='hear-bark')
+    assert_frame_equal(res, expected_res)
+    assert_series_equal(assignments, expected_assignments)
 
+
+    # TEST 3
     expected = pd.DataFrame(
         {
             "hear-bark": [False, True],
             "p": [0.7, 0.99],
         }
     )
+    import pdb;
+    pdb.set_trace()
+
+    assert res.equals(expected)
     res, assignments = BNReasoner.max_out(cpt, "dog-out")
-    assert res.equals(expected)'''
+    assert res.equals(expected)
 
 
 def test_multiply_factors():
