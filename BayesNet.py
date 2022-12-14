@@ -221,7 +221,7 @@ class BayesNet:
         # check for cycles
         if not nx.is_directed_acyclic_graph(self.structure):
             self.structure.remove_edge(edge[0], edge[1])
-            raise ValueError("Edge would make graph cyclic.")
+            raise ValueError(f"Edge {edge} would make graph cyclic.")
 
     def del_var(self, variable: str) -> None:
         """
