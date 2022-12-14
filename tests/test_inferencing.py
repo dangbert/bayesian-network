@@ -1,7 +1,59 @@
 from BNReasoner import BNReasoner, Ordering
+from BayesNet import BayesNet
 import pandas as pd
 from pandas.testing import assert_frame_equal
 from tests.conftest import LEC2_FILE
+import copy
+
+df_a = pd.DataFrame(
+    {
+        "A": [True, False],
+        "p": [0.6, 0.4],
+    }
+)
+df_b = pd.DataFrame(
+    {
+        "A": [True, True, False, False],
+        "B": [True, False, True, False],
+        "p": [0.9, 0.1, 0.2, 0.8],
+    }
+)
+df_c = pd.DataFrame(
+    {
+        "B": [True, True, False, False],
+        "C": [True, False, True, False],
+        "p": [0.3, 0.7, 0.5, 0.5],
+    }
+)
+
+def test_marginal_dist():
+    """
+    This test corresponds to slide 7-9 Lecture 4.
+    """
+    bn = BayesNet()
+    bn.create_bn(
+        ["A", "B", "C"],
+        [("A", "B"), ("B", "C")],
+        {
+            "A": copy.deepcopy(df_a),
+            "B": copy.deepcopy(df_b),
+            "C": copy.deepcopy(df_c),
+        },
+    )
+    br = BNReasoner(bn)
+    Q = {"C"}
+    e = pd.Series({"A": True})
+
+    res = br.marginal_distribution(Q, e)
+
+    expected = pd.DataFrame(
+        {
+            "C": [True, False],
+            "p": [0.32, 0.68],
+        }
+    )
+
+    assert_frame_equal(expected, res, check_dtype=False)
 
 
 def test_MEP():
@@ -23,7 +75,6 @@ def test_MEP():
     # and test this out piece by piece...
 
     # TODO: add test from workgroup?
-
 
 def test_MAP():
     """This test corresponds to slide 'Example 2 - Compute MAP'."""
@@ -51,26 +102,9 @@ def test_variable_elim__simple():
         ["A", "B", "C"],
         [("A", "B"), ("B", "C")],
         {
-            "A": pd.DataFrame(
-                {
-                    "A": [True, False],
-                    "p": [0.6, 0.4],
-                }
-            ),
-            "B": pd.DataFrame(
-                {
-                    "A": [True, True, False, False],
-                    "B": [True, False, True, False],
-                    "p": [0.9, 0.1, 0.2, 0.8],
-                }
-            ),
-            "C": pd.DataFrame(
-                {
-                    "B": [True, True, False, False],
-                    "C": [True, False, True, False],
-                    "p": [0.3, 0.7, 0.5, 0.5],
-                }
-            ),
+            "A": copy.deepcopy(df_a),
+            "B": copy.deepcopy(df_b),
+            "C": copy.deepcopy(df_c),
         },
     )
     br = BNReasoner(bn)

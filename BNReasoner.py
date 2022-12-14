@@ -36,10 +36,21 @@ class BNReasoner:
         """Clones this object, returning a deep copy"""
         return BNReasoner(deepcopy(self.bn))
 
+    def get_predecessors(self, var: str) -> List[str]:
+        """
+        Returns the predecessors of the variable in the graph.
+
+        :param var: Variable to get the predecessors from.
+        :return: List of predecessors.
+        """
+        return [p for p in nx.predecessors(var)]
+
     def _edge_pruning(self, Z: MutableSet[str]) -> None:
         """
         Delete all outgoing edges in network from nodes Z.
         (Note: doesn't update CPTs).
+
+        :param Z: Set of nodes whose outgoing edges will be deleted.
         """
         for node in Z:
             children = self.bn.get_children(node)
@@ -50,6 +61,8 @@ class BNReasoner:
         """
         Delete leaf nodes in network which are not in relevant nodes.
         (Note: doesn't update CPTs).
+
+        :param r_nodes: Set of nodes not to be deleted even if leaf node.
         """
         nodes = self.bn.get_all_variables()
 
@@ -99,10 +112,24 @@ class BNReasoner:
         """
         return self.d_separated(X, Y, Z)
 
-    """
-    Possibly TODO: write factor reduction in separate function to use again for
-    posterior marginals
-    """
+    def factor_reduction(self, e: Evidence) -> None:
+
+        # perform factor reduction on all child cpts
+        for var, value in e.items():
+            children = self.bn.get_children(var)
+
+            for child_var in children:
+                cpt = self.bn.get_cpt(child_var)
+                # zero out rows where var != E[var]:
+                new_cpt = BayesNet.reduce_factor(e, cpt)
+                # sum out var:
+                new_cpt = BNReasoner.marginalize(new_cpt, var)
+                self.bn.update_cpt(child_var, new_cpt)
+
+            # also filter down rows of var (and reset index to play nice with tests)
+            cpt = self.bn.get_cpt(var)
+            cpt = (cpt[cpt[var] == value]).reset_index(drop=True)
+            self.bn.update_cpt(var, cpt)
 
     def network_pruning(self, Q: MutableSet[str], e: Evidence) -> None:
         """
@@ -131,7 +158,6 @@ class BNReasoner:
             cpt = (cpt[cpt[var] == value]).reset_index(drop=True)
             self.bn.update_cpt(var, cpt)
 
-        """TODO: edge_pruning needs (?) to come before reduce factor"""
         # remove outgoing edges from vars in E
         self._edge_pruning(E)
         # remove any leaf nodes not appearing in Q or e
@@ -215,6 +241,7 @@ class BNReasoner:
         Given two factors f and g, compute the multiplied factor h = f * g.
 
         :param f, g: cpts of factors f and g
+        :returns: cpt of multiplied factor h
         """
         merge_on = list(f.columns & g.columns)
         merge_on.remove("p")
@@ -299,7 +326,7 @@ class BNReasoner:
 
         return ordering
 
-    def variable_elimination(self, vars: MutableSet[str], method=Ordering.MIN_DEG):
+    def variable_elimination(self, vars: MutableSet[str], method=Ordering.MIN_DEG) -> pd.DataFrame:
         """
         Sum out a given set of variables by using variable elimination.
         """
@@ -321,6 +348,35 @@ class BNReasoner:
 
         print('final_cpt', cpt)
         return cpt
+
+    def marginal_distribution(self, Q: MutableSet[str], e: Evidence, ordering_method = Ordering.MIN_DEG):
+        """
+        Given query variables Q and possibly empty evidence e, compute the marginal
+        distribution P(Q|e). Note that Q is a subset of the variables in the Bayesian
+        network X with Q ⊂ X but can also be Q = X.
+
+        :returns: dataframe containing P(not Q|e) and P(Q|e)
+        """
+        vars = self.bn.get_all_variables() - Q
+
+        # TODO: not sure about if statement at this point
+        # reduce all factors w.r.t. e
+        if not e.empty:
+            BNReasoner.factor_reduction(e)
+
+        # compute joint marginal PR (Q & e) via variable elim
+        joint_marginal = BNReasoner.variable_elimination(vars, ordering_method)
+
+        if not e.empty:
+        # sum out C to get probability of e and use it to normalize to obtain Pr(Q, e)
+            prob_e = joint_marginal['p'].sum()
+
+            # TODO: what if  Q = X?
+            # prob_e = BNReasoner.marginalize(cpt, var)
+
+            joint_marginal['p'] = joint_marginal['p'].div(prob_e)
+
+        return joint_marginal
 
     def MPE(
         self, e: Evidence, ordering_method=Ordering.MIN_DEG
@@ -346,7 +402,7 @@ class BNReasoner:
         # net = BNReasoner.node_pruning(net, unknown_vars)
 
         # compute an ordering for variable removal
-        ordering = br.get_ordering(Q, method=ordering_method)  # Q or something else??
+        ordering = br.get_ordering(Q, ordering_method)  # Q or something else??
 
         # TODO do removals, computing new cpts (use extended factors somehow)...
         # also use BayesNet.reduce_factor and get_compatible_instantiations_table
@@ -362,6 +418,9 @@ class BNReasoner:
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
         all_vars = set(self.bn.get_all_variables()) - Q
+
+        # TODO
+        predecessors = self.get_predecessors(e.index)
 
         summed_out = self.variable_elimination(all_vars, method=ordering_method)
 
