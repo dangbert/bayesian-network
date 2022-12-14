@@ -45,11 +45,11 @@ class BNReasoner:
         """
         return [p for p in nx.predecessors(var)]
 
-    def non_queried_variables(self, Q: MutableSet[str] -> List[str]:
+    def _non_queried_variables(self, Q: MutableSet[str]) -> List[str]:
         """
         Returns a list of all variables in the graph excluding queried variables.
         """
-        return [v for v in self.bn.get_all_variables() if v not in Q]
+        return set(self.bn.get_all_variables()) - Q
 
     def _edge_pruning(self, Z: MutableSet[str]) -> None:
         """
@@ -320,32 +320,44 @@ class BNReasoner:
 
         return ordering
 
-    def variable_elimination(self, Q: MutableSet[str], method=Ordering.MIN_DEG) -> pd.DataFrame:
+    def variable_elimination(
+        self, Q: MutableSet[str], method=Ordering.MIN_DEG
+    ) -> pd.DataFrame:
         """
-        Sum out a given set of variables by using variable elimination. Calculate
+        Sum out a given set of variables (all_vars - Q) by using variable elimination. Calculate
         and return prior marginal.
         """
-        ordered = self.get_ordering(BNReasoner.non_queried_variables(Q), method)
+        ordered = self.get_ordering(self._non_queried_variables(Q), method)
 
-        for i, var in enumerate(ordered):
+        all_cpts = list(self.bn.get_all_cpts().values())
 
-            if i == 0:
-                cpt = self.bn.get_cpt(var)
-            print(f"\nstep {i}\n{cpt}")
+        res = None  # running scratchpad of result
+        for var in ordered:
+            # find all cpts containing var
+            rel_cpts = [cpt for cpt in all_cpts if var in cpt.columns]
 
-            cpts = [self.bn.get_cpt(child) for child in self.bn.get_children(var)]
+            # multiply all factors containg var
+            for cpt in rel_cpts:
+                if res is None:
+                    res = cpt
+                    continue
+                res = BNReasoner.multiply_factors(res, cpt)
 
-            for t in cpts:
-                cpt = BNReasoner.multiply_factors(cpt, t)
-                print(f"after multiplied\n{cpt}")
+            # sum out
+            res = BNReasoner.marginalize(res, var)
+            print(f"after summed out\n{res}")
 
-            cpt = BNReasoner.marginalize(cpt, var)
-            print(f"after summed out\n{cpt}")
+            # update list of remaining cpts
+            all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
 
         print(f"final_cpt:\n {cpt}")
-        return cpt
+        return res
+        # TODO: actually return this:
+        return [res] + all_cpts
 
-    def marginal_distribution(self, Q: MutableSet[str], e: Evidence, ordering_method = Ordering.MIN_DEG):
+    def marginal_distribution(
+        self, Q: MutableSet[str], e: Evidence, ordering_method=Ordering.MIN_DEG
+    ):
         """
         Given query variables Q and possibly empty evidence e, compute the marginal
         distribution P(Q|e). Note that Q is a subset of the variables in the Bayesian
@@ -354,20 +366,20 @@ class BNReasoner:
         :returns: dataframe containing P(not Q|e) and P(Q|e)
         """
         # reduce all factors w.r.t. e
-        BNReasoner._apply_evidence(e)
+        self._apply_evidence(e)
 
-        vars = BNReasoner.non_queried_variables(Q)
+        vars = self._non_queried_variables(Q)
         # TODO: what if  Q = X?
 
         # compute joint marginal PR (Q & e) via variable elim
-        joint_marginal = BNReasoner.variable_elimination(vars, ordering_method)
+        joint_marginal = self.variable_elimination(vars, ordering_method)
 
         if not e.empty:
 
             # sum out C to get probability of e and use it to normalize to obtain Pr(Q, e)
-            prob_e = joint_marginal['p'].sum()
+            prob_e = joint_marginal["p"].sum()
 
-            joint_marginal['p'] = joint_marginal['p'].div(prob_e)
+            joint_marginal["p"] = joint_marginal["p"].div(prob_e)
 
         return joint_marginal
 
@@ -410,7 +422,7 @@ class BNReasoner:
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
-        all_vars = self.non_queried_variables(Q)
+        all_vars = self._non_queried_variables(Q)
 
         # step 1: reduce w.r.t. to e
         self._apply_evidence(e)

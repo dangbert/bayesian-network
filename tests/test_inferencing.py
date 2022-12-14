@@ -26,6 +26,7 @@ df_c = pd.DataFrame(
     }
 )
 
+
 def test_marginal_dist():
     """
     This test corresponds to slide 7-9 Lecture 4.
@@ -76,6 +77,7 @@ def test_MEP():
 
     # TODO: add test from workgroup?
 
+
 def test_MAP():
     """This test corresponds to slide 'Example 2 - Compute MAP'."""
     br = BNReasoner(LEC2_FILE)
@@ -109,8 +111,8 @@ def test_variable_elim__simple():
         },
     )
     br = BNReasoner(bn)
-    vars = {"A", "B"}
-    res = br.variable_elimination(vars)
+    Q = {"C"}
+    res = br.variable_elimination(Q)
 
     expected = pd.DataFrame(
         {
@@ -126,14 +128,17 @@ def test_variable_elim__map():
     """Taken from slide 20 Lecture 4."""
 
     br = BNReasoner(LEC2_FILE)
-    vars = {"O", "Y", "X"}
-    res = br.variable_elimination(vars)
+    Q = {"I", "J"}
+    E = pd.Series({"O": True})
+    # to do this test properly based on the MAP slide, we have to apply the evidence first
+    br._apply_evidence(E)
+    res = br.variable_elimination(Q)
 
     expected = pd.DataFrame(
         {
-            "I": [True, True, False, False],
-            "J": [True, False, True, False],
-            "p": [0.93248, 0.97088, 0.07712, 0.97088],
+            "J": [False, False, True, True],
+            "I": [False, True, False, True],
+            "p": [0.97088, 0.97088, 0.07712, 0.93248],
         }
     )
 
