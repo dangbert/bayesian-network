@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+
+
+<!--
+	Bayesian network in XMLBIF v0.3 (BayesNet Interchange Format)
+	Produced by JavaBayes (http://www.cs.cmu.edu/~javabayes/
+	Output created Wed Aug 12 21:16:40 GMT+01:00 1998
+-->
+
+
+
+<!-- DTD for the XMLBIF 0.3 format -->
+<!DOCTYPE BIF [
+	<!ELEMENT BIF ( NETWORK )*>
+	      <!ATTLIST BIF VERSION CDATA #REQUIRED>
+	<!ELEMENT NETWORK ( NAME, ( PROPERTY | VARIABLE | DEFINITION )* )>
+	<!ELEMENT NAME (#PCDATA)>
+	<!ELEMENT VARIABLE ( NAME, ( OUTCOME |  PROPERTY )* ) >
+	      <!ATTLIST VARIABLE TYPE (nature|decision|utility) "nature">
+	<!ELEMENT OUTCOME (#PCDATA)>
+	<!ELEMENT DEFINITION ( FOR | GIVEN | TABLE | PROPERTY )* >
+	<!ELEMENT FOR (#PCDATA)>
+	<!ELEMENT GIVEN (#PCDATA)>
+	<!ELEMENT TABLE (#PCDATA)>
+	<!ELEMENT PROPERTY (#PCDATA)>
+]>
+
+
+<BIF VERSION="0.3">
+<NETWORK>
+<NAME>use_case</NAME>
+
+<!-- Variables -->
+<VARIABLE TYPE="nature">
+	<NAME>under-25</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (73, 165)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>woman</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (190, 69)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>bad-weather</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (155, 165)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>being-drunk</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (154, 241)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>risky-driver</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (112, 69)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>distractions</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (73, 165)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>use-car</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (190, 69)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>decreased-alertness</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (155, 165)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>on-time</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (154, 241)</PROPERTY>
+</VARIABLE>
+
+<VARIABLE TYPE="nature">
+	<NAME>car-accident</NAME>
+	<OUTCOME>true</OUTCOME>
+	<OUTCOME>false</OUTCOME>
+	<PROPERTY>position = (112, 69)</PROPERTY>
+</VARIABLE>
+
+<!-- Probability distributions -->
+
+<DEFINITION>
+	<FOR>under-25</FOR>
+	<TABLE>0.35 0.65 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>woman</FOR>
+	<TABLE>0.50 0.50 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>bad-weather</FOR>
+	<TABLE>0.52 0.48 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>being-drunk</FOR>
+	<GIVEN>woman</GIVEN>
+	<GIVEN>under-25</GIVEN>
+	<TABLE>0.07 0.93 0.04 0.96 0.10 0.90 0.06 0.94 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>distractions</FOR>
+	<GIVEN>under-25</GIVEN>
+	<GIVEN>woman</GIVEN>
+	<TABLE>0.40 0.60 0.35 0.65 0.20 0.80 0.15 0.85 </TABLE>
+</DEFINITION>
+
+
+
+<DEFINITION>
+	<FOR>risky-driver</FOR>
+	<GIVEN>under-25</GIVEN>
+	<GIVEN>woman</GIVEN>
+	<TABLE>0.15 0.85 0.20 0.80 0.05 0.95 0.10 0.90 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>decreased-alertness</FOR>
+	<GIVEN>distractions</GIVEN>
+	<GIVEN>bad-weather</GIVEN>
+	<TABLE>0.25 0.75 0.15 0.85 0.10 0.90 0.01 0.99 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>use-car</FOR>
+	<GIVEN>bad-weather</GIVEN>
+	<GIVEN>under-25</GIVEN>
+	<GIVEN>woman</GIVEN>
+	<TABLE>0.40 0.60 0.30 0.70 0.60 0.40 0.50 0.50 0.30 0.70 0.20 0.80 0.50 0.50 0.40 0.60 </TABLE>
+</DEFINITION>
+
+
+<DEFINITION>
+	<FOR>car-accident</FOR>
+	<GIVEN>use-car</GIVEN>
+	<GIVEN>decreased-alertness</GIVEN>
+	<GIVEN>risky-driver</GIVEN>
+	<GIVEN>being-drunk</GIVEN>
+
+	<TABLE>0.40 0.60 0.15 0.85 0.35 0.65 0.10 0.90 0.20 0.80 0.05 0.95 0.15 0.85 0.01 0.99 0.20 0.80 0.07 0.93 0.17 0.83 0.05 0.95 0.10 0.90 0.03 0.97 0.7 0.30 0.005 0.995 </TABLE>
+</DEFINITION>
+
+<DEFINITION>
+	<FOR>on-time</FOR>
+	<GIVEN>being-drunk</GIVEN>
+	<GIVEN>bad-weather</GIVEN>
+	<GIVEN>risky-driver</GIVEN>
+	<GIVEN>car-accident</GIVEN>
+
+	<TABLE>0 1 0.0001 0.9999 0.0002 0.9998 0.0003 0.9997 0.43 0.67 0.53 0.47 0.25 0.75 0.28 0.72 0 1 0.0001 0.9999 0.0002 0.9998 0.0003 0.9997 0.40 0.60 0.50 0.50 0.22 0.78 0.25 0.75 </TABLE>
+</DEFINITION>
+
+</NETWORK>
+</BIF>
