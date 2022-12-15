@@ -121,19 +121,20 @@ def test_MAP():
     e = pd.Series({"O": True})
     Q = {"I", "J"}
 
-    # assignments, prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
-    # expected = pd.Series({"I": True, "J": False})
-    # assert_frame_equal(expected, assignments)
-    # assert prob == 0.242720
-    prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
-    expected = pd.DataFrame([0.242720], columns=['p'])
-    assert_frame_equal(expected, prob)
-   #  assert prob == 0.242720
+    prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
+    expected = pd.Series({"I": True, "J": False})
+    assert_frame_equal(expected, asn)
+    assert prob == 0.242720
 
     # should get same result regardless of ordering method
-    # assignments, prob = br.MAP(Q, e, ordering_method=Ordering.MIN_FILL)
-    # assert_frame_equal(expected, assignments)
-    # assert prob == 0.242720
+    prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_FILL)
+    assert_frame_equal(expected, asn)
+    assert prob == 0.242720
+
+    # old map test
+    ''' prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
+    expected = pd.DataFrame([0.242720], columns=['p'])
+    assert_frame_equal(expected, prob)'''
 
     # TODO: add test from workgroup?
 

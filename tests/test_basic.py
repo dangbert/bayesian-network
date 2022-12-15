@@ -148,6 +148,9 @@ def test_maxing_out():
     assert_frame_equal(res, expected_res)
     assert_series_equal(assignments, expected_assignments)
 
+    #res = BNReasoner.max_out(cpt, "D")
+    #cpt = copy.deepcopy(FACTOR_EX1)
+
     # TEST 2
     cpt = copy.deepcopy(FACTOR_EX1)
     res, asn = BNReasoner.max_out(cpt, "hear-bark")
@@ -163,18 +166,20 @@ def test_maxing_out():
 
 
     # TEST 3
-    expected = pd.DataFrame(
+    cpt = copy.deepcopy(FACTOR_EX1)
+    res, assignments = BNReasoner.max_out(cpt, "dog-out")
+    expected_res = pd.DataFrame(
         {
             "hear-bark": [False, True],
             "p": [0.7, 0.99],
         }
     )
-    import pdb;
-    pdb.set_trace()
+    expected_assignments = pd.Series([], name='dog-out')
+    # import pdb;
+    # pdb.set_trace()
 
-    assert res.equals(expected)
-    res, assignments = BNReasoner.max_out(cpt, "dog-out")
-    assert res.equals(expected)
+    assert_frame_equal(res, expected_res)
+    assert_series_equal(assignments, expected_assignments)
 
 
 def test_multiply_factors():

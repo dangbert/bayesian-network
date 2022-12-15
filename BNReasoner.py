@@ -166,10 +166,9 @@ class BNReasoner:
         self._node_pruning(set.union(Q, E))
 
     @staticmethod
-    def marginalize(
+    def marginalizing(
         f: pd.DataFrame,
-        X: str,
-    ):
+        X: str) -> pd.DataFrame:
         """
         Given a factor and a variable X, compute the CPT in which X is summed-out.
 
@@ -206,6 +205,20 @@ class BNReasoner:
         return deepcopy(cpt)  # just in case
 
     @staticmethod
+    def marginalize(
+        f: pd.DataFrame,
+        X: str) -> pd.DataFrame:
+        """
+        Given a factor and a variable X, compute the CPT in which X is summed-out.
+
+        :param f: the factor to maginalize.
+        :param X: name of the variable to sum out.
+        """
+        vars = [v for v in f.columns if v not in set([X, "p"])]
+        cpt = f.groupby(vars).sum().reset_index()
+        return cpt.drop(X, axis=1)
+
+    @staticmethod
     def maxing_out(f: pd.DataFrame, X: str):
         """
         Given a factor and a variable X, compute the CPT in which X is maxed-out.
@@ -239,16 +252,21 @@ class BNReasoner:
 
     @staticmethod
     def max_out(f: pd.DataFrame, X: str) -> pd.DataFrame:
+        """
+        Given a factor and a variable X, compute the CPT in which X is maxed-out.
+        Keep track of which instantiation of X led to the maximized value.
 
+        :param f: the factor to max-out.
+        :param X: name of the variable to max-out.
+        """
         vars = [v for v in f.columns if v not in set([X, "p"])]
 
         cpt = f.groupby(vars).max().reset_index()
-        print(cpt)
+        # print(cpt)
 
         # keep track of instantiations
         extended = cpt.iloc[:,-2]
-        print(extended)
-
+        # print(extended)
 
         # remove X column from dataframe
         cpt = cpt.drop(X, axis=1)
@@ -256,7 +274,7 @@ class BNReasoner:
         return cpt, extended
 
     @staticmethod
-    def multiply_factors(f: pd.DataFrame, g: pd.DataFrame):
+    def multiply_factors(f: pd.DataFrame, g: pd.DataFrame) -> pd.DataFrame:
         """
         Given two factors f and g, compute the multiplied factor h = f * g.
 
@@ -383,7 +401,7 @@ class BNReasoner:
 
     def marginal_distribution(
         self, Q: MutableSet[str], e: Evidence, ordering_method=Ordering.MIN_DEG
-    ):
+    ) -> pd.DataFrame:
         """
         Given query variables Q and possibly empty evidence e, compute the marginal
         distribution P(Q|e). Note that Q is a subset of the variables in the Bayesian
@@ -462,11 +480,8 @@ class BNReasoner:
         for i, var in enumerate(Q):
             cpt = self.bn.get_cpt(var)
             map = self.multiply_factors(map, cpt)
-            map = self.max_out(map, var)
+            map, extended = self.max_out(map, var)
             # print('map', map)
             # print(isinstance(map, pd.DataFrame))
 
-        return map
-
-        """TODO: in max_out keep track of value so we can call it here"""
-
+        return map, extended
