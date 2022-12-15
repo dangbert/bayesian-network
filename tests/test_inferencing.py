@@ -123,16 +123,16 @@ def test_MAP():
 
     # import pdb; pdb.set_trace()
     prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
-    expected = pd.Series({"I": True, "J": False})
+    # here we slightly differe from the slide because there's a tie of I being True or False
+    #  we take I as False arbitrarily rather than True
+    expected = {"I": False, "J": False}
 
-    # import pdb; pdb.set_trace()
-
-    assert_frame_equal(expected, asn)
+    assert expected == asn
     assert prob == 0.242720
 
     # should get same result regardless of ordering method
     prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_FILL)
-    assert_frame_equal(expected, asn)
+    assert expected == asn
     assert prob == 0.242720
 
     # old map test

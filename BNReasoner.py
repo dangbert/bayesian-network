@@ -189,20 +189,20 @@ class BNReasoner:
         """
         vars = [v for v in f.columns if v not in set([X, "p"])]
 
-        if not vars:
-            # index = f.Value.argmax()
-            # return f.iloc[f.Value.argmax(), 0:2]
-            return f[f["p"] == f["p"].max()]
-
-        cpt = f.groupby(vars)["p"].idxmax()
-        cpt = f.loc[cpt]
+        # cpt = f.groupby(vars)["p"].max().reset_index()
+        max_index = f.groupby(vars)["p"].idxmax()
+        cpt = f.loc[max_index]
         cpt = cpt.reset_index(drop=True)
 
         # keep track of instantiations
-        extended = cpt.iloc[:, -2]
+        extended = cpt[X]
         # remove X column from dataframe
         cpt = cpt.drop(X, axis=1)
 
+
+
+        extended = extended.map(lambda v: {extended.name: v})
+        extended.name = None
         return cpt, extended
 
     @staticmethod
@@ -310,7 +310,7 @@ class BNReasoner:
             # find all cpts containing var
             rel_cpts = [cpt for cpt in all_cpts if var in cpt.columns]
 
-            # multiply all factors containg var
+            # multiply all factors containing var
             for cpt in rel_cpts:
                 if res is None:
                     res = cpt
@@ -407,16 +407,25 @@ class BNReasoner:
 
         extended_factors = []
         # step 3: max out Q
-        for var in ["I", "J"]:
-            print(var)
+        for var in Q:
             cpt = self.bn.get_cpt(var)
-            print("cpt", cpt)
             map = self.multiply_factors(map, cpt)
-            print("map", map)
-            map, extended = self.max_out(map, var)
-            print("map", map)
-            print("extended", extended)
-            extended_factors.append(extended)
+
+            if len(map.columns) > 2:
+                map, extended = self.max_out(map, var)
+            else:
+                # we have just one var in map
+
+
+                max_idx = map['p'].idxmax()
+                p = map['p'][max_idx]
+
+                extended = extended[max_idx]
+                extended[var] = map[var][max_idx]
+
+
+                return p, extended
+
             # print(isinstance(map, pd.DataFrame))
 
-        return map, extended
+        #return map, extended

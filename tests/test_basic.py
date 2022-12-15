@@ -143,11 +143,11 @@ def test_maxing_out():
             "p": [1.0, 0.8, 0.9, 0.95],
         }
     )
-    expected_asn = pd.Series([False, True, True, True], name="D")
+    expected_asn = pd.Series([{"D": False}, {"D": True}, {"D": True}, {"D": True}])
     assert_frame_equal(res, expected_res)
     assert_series_equal(asn, expected_asn)
 
-    # TEST 2: does not pass!! since assignment is wrong!
+    # TEST 2:
     cpt = copy.deepcopy(FACTOR_EX1)
     res, asn = BNReasoner.max_out(cpt, "hear-bark")
     expected_res = pd.DataFrame(
@@ -156,11 +156,11 @@ def test_maxing_out():
             "p": [0.7, 0.99],
         }
     )
-    expected_asn = pd.Series([False, True], name="hear-bark")
+    expected_asn = pd.Series([{"hear-bark": False}, {"hear-bark": True}])
     assert_frame_equal(res, expected_res)
     assert_series_equal(asn, expected_asn)
 
-    """# TEST 3
+    # TEST 3
     cpt = copy.deepcopy(FACTOR_EX1)
     res, assignments = BNReasoner.max_out(cpt, "dog-out")
     expected_res = pd.DataFrame(
@@ -170,11 +170,9 @@ def test_maxing_out():
         }
     )
 
-    # import pdb; pdb.set_trace()
-
-    expected_assignments = pd.Series([False, True], name='dog-out')
+    expected_asn = pd.Series([{"dog-out": False}, {"dog-out": True}])
     assert_frame_equal(res, expected_res)
-    assert_series_equal(assignments, expected_assignments)"""
+    assert_series_equal(assignments, expected_asn)
 
 
 def test_multiply_factors():
