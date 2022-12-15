@@ -49,8 +49,8 @@ def test_marginal_dist__posterior():
 
     expected = pd.DataFrame(
         {
-            "C": [True, False],
-            "p": [0.32, 0.68],
+            "C": [False, True],
+            "p": [0.68, 0.32],
         }
     )
     assert_frame_equal(expected, res, check_dtype=False)
@@ -77,8 +77,8 @@ def test_marginal_dist__prior():
     res = br.marginal_distribution({"C"}, pd.Series({}))
     expected = pd.DataFrame(
         {
-            "C": [True, False],
-            "p": [0.376, 0.624],
+            "C": [False, True],
+            "p": [0.624, 0.376],
         }
     )
     assert_frame_equal(expected, res, check_dtype=False)
@@ -87,8 +87,8 @@ def test_marginal_dist__prior():
     res = br.marginal_distribution({"B"}, pd.Series({}))
     expected = pd.DataFrame(
         {
-            "B": [True, False],
-            "p": [0.62, 0.38],
+            "B": [False, True],
+            "p": [0.38, 0.62],
         }
     )
     assert_frame_equal(expected, res, check_dtype=False)
@@ -121,15 +121,21 @@ def test_MAP():
     e = pd.Series({"O": True})
     Q = {"I", "J"}
 
-    assignments, prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
+    # import pdb; pdb.set_trace()
+    prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
     expected = pd.Series({"I": True, "J": False})
-    assert_frame_equal(expected, assignments)
+    assert_frame_equal(expected, asn)
     assert prob == 0.242720
 
     # should get same result regardless of ordering method
-    assignments, prob = br.MAP(Q, e, ordering_method=Ordering.MIN_FILL)
-    assert_frame_equal(expected, assignments)
+    prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_FILL)
+    assert_frame_equal(expected, asn)
     assert prob == 0.242720
+
+    # old map test
+    ''' prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
+    expected = pd.DataFrame([0.242720], columns=['p'])
+    assert_frame_equal(expected, prob)'''
 
     # TODO: add test from workgroup?
 
@@ -153,11 +159,10 @@ def test_variable_elim__simple():
 
     expected = pd.DataFrame(
         {
-            "C": [True, False],
-            "p": [0.376, 0.624],
+            "C": [False, True],
+            "p": [0.624, 0.376],
         }
     )
-
     assert_frame_equal(expected, res, check_dtype=False)
 
 

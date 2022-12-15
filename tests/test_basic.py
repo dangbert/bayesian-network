@@ -2,7 +2,7 @@ from tests.conftest import DOG_FILE, LEC1_FILE, LEC2_FILE, compare_frames
 from BNReasoner import BNReasoner, Ordering
 from BayesNet import BayesNet
 import pandas as pd
-from pandas.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal, assert_series_equal
 import copy
 import numpy as np
 
@@ -71,7 +71,6 @@ def test_marginalization():
     cpt = copy.deepcopy(FACTOR_EX1)
     # assert cpt.equals(br.bn.get_cpt("hear-bark"))
     # print(cpt)
-
     res = BNReasoner.marginalize(cpt, "dog-out")
     expected = pd.DataFrame(
         {
@@ -86,8 +85,8 @@ def test_marginalization():
     res = BNReasoner.marginalize(cpt, "A")
     expected = pd.DataFrame(
         {
-            "B": [True, False],
-            "p": [0.54 + 0.08, 0.06 + 0.32],
+            "B": [False, True],
+            "p": [0.06 + 0.32, 0.54 + 0.08],
         }
     )
     compare_frames(res, expected)
@@ -95,8 +94,8 @@ def test_marginalization():
     res = BNReasoner.marginalize(cpt, "B")
     expected = pd.DataFrame(
         {
-            "A": [True, False],
-            "p": [0.54 + 0.06, 0.08 + 0.32],
+            "A": [False, True],
+            "p": [0.08 + 0.32, 0.54 + 0.06],
         }
     )
     compare_frames(res, expected)
@@ -105,8 +104,8 @@ def test_marginalization():
     res = BNReasoner.marginalize(cpt, "D")
     expected = pd.DataFrame(
         {
-            "B": [True, True, False, False],
-            "C": [True, False, True, False],
+            "B": [False, False, True, True],
+            "C": [False, True, False, True],
             "p": [1.0, 1.0, 1.0, 1.0],
         }
     )
@@ -134,40 +133,48 @@ def test_marginalization():
 
 
 def test_maxing_out():
+    # TEST 1
     cpt = copy.deepcopy(FACTOR_EX3)
-    res = BNReasoner.max_out(cpt, "D")
-
-    # TODO: max_out should return a pd.Series() of the instantations for each row in the result
-    # ins = pd.Series([{}, {}, {}])
-    expected = pd.DataFrame(
+    res, asn = BNReasoner.max_out(cpt, "D")
+    expected_res = pd.DataFrame(
         {
-            "B": [True, True, False, False],
-            "C": [True, False, True, False],
-            "p": [0.95, 0.9, 0.8, 1.0],
+            "B": [False, False, True, True],
+            "C": [False, True, False, True],
+            "p": [1.0, 0.8, 0.9, 0.95],
         }
     )
-    assert res.equals(expected)
+    expected_asn = pd.Series([False, True, True, True], name="D")
+    assert_frame_equal(res, expected_res)
+    assert_series_equal(asn, expected_asn)
 
-    res = BNReasoner.max_out(cpt, "D")
+    # TEST 2: does not pass!! since assignment is wrong!
     cpt = copy.deepcopy(FACTOR_EX1)
-
-    expected = pd.DataFrame(
+    res, asn = BNReasoner.max_out(cpt, "hear-bark")
+    expected_res = pd.DataFrame(
         {
             "dog-out": [False, True],
             "p": [0.7, 0.99],
         }
     )
-    res = BNReasoner.max_out(cpt, "hear-bark")
-    assert res.equals(expected)
+    expected_asn = pd.Series([False, True], name="hear-bark")
+    assert_frame_equal(res, expected_res)
+    assert_series_equal(asn, expected_asn)
 
-    expected = pd.DataFrame(
+    """# TEST 3
+    cpt = copy.deepcopy(FACTOR_EX1)
+    res, assignments = BNReasoner.max_out(cpt, "dog-out")
+    expected_res = pd.DataFrame(
         {
             "hear-bark": [False, True],
             "p": [0.7, 0.99],
         }
     )
-    res = BNReasoner.max_out(cpt, "dog-out")
-    assert res.equals(expected)
+
+    # import pdb; pdb.set_trace()
+
+    expected_assignments = pd.Series([False, True], name='dog-out')
+    assert_frame_equal(res, expected_res)
+    assert_series_equal(assignments, expected_assignments)"""
 
 
 def test_multiply_factors():

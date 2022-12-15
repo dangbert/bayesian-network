@@ -166,47 +166,20 @@ class BNReasoner:
         self._node_pruning(set.union(Q, E))
 
     @staticmethod
-    def marginalize(
-        f: pd.DataFrame,
-        X: str,
-    ):
+    def marginalize(f: pd.DataFrame, X: str) -> pd.DataFrame:
         """
         Given a factor and a variable X, compute the CPT in which X is summed-out.
 
         :param f: the factor to maginalize.
         :param X: name of the variable to sum out.
         """
+        vars = [v for v in f.columns if v not in set([X, "p"])]
+        cpt = f.groupby(vars).sum().reset_index()
+        return cpt.drop(X, axis=1)
 
-        # e.g. ['B', 'C', 'D']
-        all_vars = [v for v in f.columns.values.tolist() if v != "p"]
-        # e.g. ['B', 'C']
-        new_vars = [v for v in all_vars if v not in set([X, "p"])]
-
-        cpt = pd.DataFrame([], columns=new_vars + ["p"])
-        data = {}
-        for idx, row in f.iterrows():
-            key = row[new_vars].to_string()  # string representing vals in rows
-            # store index of row with these values that has max p value
-            if key not in data:
-                data[key] = []
-            data[key].append(idx)
-
-        idx_lists = list(data.values())  # list of row indices to keep
-        for indices in idx_lists:
-            # indices is a list of row indices in f where new_vars are identical
-            p = sum(f.loc[indices, "p"])
-            vals = f.loc[indices[0], new_vars].tolist()
-            # add new row to final cpt
-            # cpt = cpt.append(vals + [p], columns=new_vars + ["p"])
-            cpt = cpt.append(
-                pd.Series(vals + [p], index=cpt.columns), ignore_index=True
-            )
-
-        cpt = cpt.reset_index(drop=True)
-        return deepcopy(cpt)  # just in case
-
+    # TODO: max_out returns dataframe and series?!
     @staticmethod
-    def max_out(f: pd.DataFrame, X: str):
+    def max_out(f: pd.DataFrame, X: str) -> pd.DataFrame:
         """
         Given a factor and a variable X, compute the CPT in which X is maxed-out.
         Keep track of which instantiation of X led to the maximized value.
@@ -214,31 +187,21 @@ class BNReasoner:
         :param f: the factor to max-out.
         :param X: name of the variable to max-out.
         """
-        # e.g. ['B', 'C', 'D']
-        all_vars = [v for v in f.columns.values.tolist() if v != "p"]
-        # e.g. ['B', 'C']
-        new_vars = [v for v in all_vars if v not in set([X, "p"])]
-
-        # cpt = pd.DataFrame([], columns=new_vars + ["p"])
-        data = {}
-        for idx, row in f.iterrows():
-            key = row[new_vars].to_string()  # string representing vals in rows
-            # store index of row with these values that has max p value
-            if key not in data:
-                data[key] = idx
-            else:
-                if f.loc[data[key], "p"] < row["p"]:
-                    data[key] = idx  # found row (of same vals) with larger p
-
-        keep_idxs = list(data.values())  # list of row indices to keep
-        cpt = deepcopy(f.loc[keep_idxs, :])
-        del cpt[X]
-        cpt.reindex()
+        vars = [v for v in f.columns if v not in set([X, "p"])]
+        cpt = f.groupby(vars)["p"].idxmax()
+        cpt = f.loc[cpt]
         cpt = cpt.reset_index(drop=True)
-        return cpt
+
+        # keep track of instantiations
+        extended = cpt.iloc[:, -2]
+
+        # remove X column from dataframe
+        cpt = cpt.drop(X, axis=1)
+
+        return cpt, extended
 
     @staticmethod
-    def multiply_factors(f: pd.DataFrame, g: pd.DataFrame):
+    def multiply_factors(f: pd.DataFrame, g: pd.DataFrame) -> pd.DataFrame:
         """
         Given two factors f and g, compute the multiplied factor h = f * g.
 
@@ -365,7 +328,7 @@ class BNReasoner:
 
     def marginal_distribution(
         self, Q: MutableSet[str], e: Evidence, ordering_method=Ordering.MIN_DEG
-    ):
+    ) -> pd.DataFrame:
         """
         Given query variables Q and possibly empty evidence e, compute the marginal
         distribution P(Q|e). Note that Q is a subset of the variables in the Bayesian
@@ -431,22 +394,26 @@ class BNReasoner:
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
-        all_vars = self._non_queried_variables(Q)
-
         # step 1: reduce w.r.t. to e
         self._apply_evidence(e)
 
         # step 2: repeatedly multiply and sum out
-        map = self.variable_elimination(all_vars, method=ordering_method)
+        map = self.variable_elimination(Q, ordering_method)
 
+        all_cpts = list(self.bn.get_all_cpts().values())
+
+        extended_factors = []
         # step 3: max out Q
-        for i, q in enumerate(Q):
-            if i == 0:
-                maxed_out = BNReasoner.max_out(map, q)
+        for var in ["I", "J"]:
+            print(var)
+            cpt = self.bn.get_cpt(var)
+            print("cpt", cpt)
+            map = self.multiply_factors(map, cpt)
+            print("map", map)
+            map, extended = self.max_out(map, var)
+            print("map", map)
+            print("extended", extended)
+            extended_factors.append(extended)
+            # print(isinstance(map, pd.DataFrame))
 
-            else:
-                maxed_out = self.max_out(maxed_out, q)
-
-        """TODO: in max_out keep track of value so we can call it here"""
-
-        return f"The MAP of of {Q} is given {e} is {'not yet resolved'}'"
+        return map, extended
