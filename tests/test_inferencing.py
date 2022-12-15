@@ -124,6 +124,9 @@ def test_MAP():
     # import pdb; pdb.set_trace()
     prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
     expected = pd.Series({"I": True, "J": False})
+
+    import pdb; pdb.set_trace()
+
     assert_frame_equal(expected, asn)
     assert prob == 0.242720
 
