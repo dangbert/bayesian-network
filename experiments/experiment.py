@@ -173,20 +173,32 @@ def run_experiment(outpath: str, nets: List[BayesNet]) -> Dict:
     all_stats["RQ1"] = {}
     for method in [Ordering.MIN_DEG, Ordering.MIN_FILL]:
         method_stats = {"times": []}
-        for net in nets:
-            for vars in ELIMINATION_QUERIES:
+        logging.info(f"method={str(method.value)}")
+        for n, net in enumerate(nets):
+            for i, vars in enumerate(ELIMINATION_QUERIES):
+                logging.info(f"\nnet {n}, query {i}")
                 br = BNReasoner(deepcopy(net))
                 cpu_time = time.process_time()
                 all_vars = set(br.bn.get_all_variables())
                 assert set(vars).issubset(all_vars)
+
                 Q = all_vars - set(vars)
+                if i == 1:
+                    import pdb
+
+                    pdb.set_trace()
                 res = br.variable_elimination(Q, method=method)
                 cpu_time = time.process_time() - cpu_time
                 method_stats["times"].append(cpu_time)
 
         all_stats["RQ1"][str(method.value)] = method_stats
 
+    # TODO: now do RQ2
+
+    # TODO: now do set of interesting_queries on USE_CASE_FILE?
+
     write_stats()
+
     return all_stats
 
 
@@ -197,6 +209,7 @@ def load_networks(dataset_dir: str, view: bool = False) -> List[BayesNet]:
 
     nets = []
     for fname in glob.glob(pattern):
+        logging.info(f"loading: '{fname}'")
         net = BayesNet()
         net.load_from_bifxml(fname)
         nets.append(net)

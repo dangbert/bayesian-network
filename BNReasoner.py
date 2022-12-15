@@ -177,9 +177,8 @@ class BNReasoner:
         cpt = f.groupby(vars).sum().reset_index()
         return cpt.drop(X, axis=1)
 
-    # TODO: max_out returns dataframe and series?!
     @staticmethod
-    def max_out(f: pd.DataFrame, X: str) -> pd.DataFrame:
+    def max_out(f: pd.DataFrame, X: str) -> Tuple[pd.DataFrame, pd.Series]:
         """
         Given a factor and a variable X, compute the CPT in which X is maxed-out.
         Keep track of which instantiation of X led to the maximized value.
@@ -198,8 +197,6 @@ class BNReasoner:
         extended = cpt[X]
         # remove X column from dataframe
         cpt = cpt.drop(X, axis=1)
-
-
 
         extended = extended.map(lambda v: {extended.name: v})
         extended.name = None
@@ -310,12 +307,25 @@ class BNReasoner:
             # find all cpts containing var
             rel_cpts = [cpt for cpt in all_cpts if var in cpt.columns]
 
-            # multiply all factors containing var
+            # multiply all factors containg var
+            # if Q == {"5", "0", "7", "9", "1", "4"}:
+            #    import pdb
+
+            #    pdb.set_trace()
             for cpt in rel_cpts:
                 if res is None:
                     res = cpt
                     continue
-                res = BNReasoner.multiply_factors(res, cpt)
+                # TODO: fix this:
+                try:
+                    res = BNReasoner.multiply_factors(res, cpt)
+                except ValueError as e:
+                    print(e)
+                    import pdb
+
+                    pdb.set_trace()
+                    print(e)
+                    raise e
 
             # sum out
             res = BNReasoner.marginalize(res, var)
@@ -358,9 +368,7 @@ class BNReasoner:
 
         return joint_marginal
 
-    def MPE(
-        self, e: Evidence, ordering_method=Ordering.MIN_DEG
-    ) -> Tuple[Evidence, float]:
+    def MPE(self, e: Evidence, ordering_method=Ordering.MIN_DEG) -> Tuple[float, Dict]:
         """
         Given evidence e, compute the most probable explanation.
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
@@ -371,25 +379,39 @@ class BNReasoner:
         br = self.deepcopy()  # create deep copy of self we can destructively edit
 
         all_vars = set(self.bn.get_all_variables())
-
         known_vars = set(list(e.keys()))
         Q = all_vars - known_vars  # list of unknown vars
-
-        br.network_pruning(Q, e)
-
-        # br = BNReasoner._edge_pruning(br, known_vars)
-        # no node_pruning for MEP because Q + e = all_vars
-        # net = BNReasoner.node_pruning(net, unknown_vars)
+        br.network_pruning(Q, e)  # (also applies evidence)
 
         # compute an ordering for variable removal
-        ordering = br.get_ordering(Q, ordering_method)  # Q or something else??
+        ordering = br.get_ordering(Q, ordering_method)
+        all_cpts = list(self.bn.get_all_cpts().values())
 
-        # TODO do removals, computing new cpts (use extended factors somehow)...
-        # also use BayesNet.reduce_factor and get_compatible_instantiations_table
+        res = None
+        # now we do variable_elimination but by maxing_out
+        for var in ordering:
+            # find all cpts containing var
+            rel_cpts = [cpt for cpt in all_cpts if var in cpt.columns]
+
+            # res = None
+            for cpt in rel_cpts:
+                if res is None:
+                    res = cpt
+                    continue
+                res = BNReasoner.multiply_factors(res, cpt)
+
+            # max out var
+            res, ins = BNReasoner.max_out(res, var)
+            # import pdb
+
+            # pdb.set_trace()
+
+            # update list of remaining cpts
+            all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
 
     def MAP(
         self, Q: MutableSet[str], e: Evidence, ordering_method=Ordering.MIN_DEG
-    ) -> Tuple[Evidence, float]:
+    ) -> Tuple[float, Dict]:
         """
         Compute the maximum a-posteriori instantiation + value of query variables Q given (possibly empty) evidence e.
 
@@ -397,35 +419,29 @@ class BNReasoner:
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
-        # step 1: reduce w.r.t. to e
-        self._apply_evidence(e)
+        br = self.deepcopy()  # create deep copy of self we can destructively edit
+
+        # step 1: reduce w.r.t. e
+        br._apply_evidence(e, condition=True)
 
         # step 2: repeatedly multiply and sum out
-        map = self.variable_elimination(Q, ordering_method)
+        map = br.variable_elimination(Q, ordering_method)
 
-        all_cpts = list(self.bn.get_all_cpts().values())
+        # all_cpts = list(br.bn.get_all_cpts().values())
 
-        extended_factors = []
         # step 3: max out Q
         for var in Q:
-            cpt = self.bn.get_cpt(var)
+            cpt = br.bn.get_cpt(var)
             map = self.multiply_factors(map, cpt)
 
             if len(map.columns) > 2:
-                map, extended = self.max_out(map, var)
+                map, extended = br.max_out(map, var)
             else:
                 # we have just one var in map
-
-
-                max_idx = map['p'].idxmax()
-                p = map['p'][max_idx]
+                max_idx = map["p"].idxmax()
+                p = map["p"][max_idx]
 
                 extended = extended[max_idx]
                 extended[var] = map[var][max_idx]
 
-
                 return p, extended
-
-            # print(isinstance(map, pd.DataFrame))
-
-        #return map, extended
