@@ -165,44 +165,6 @@ class BNReasoner:
         # remove any leaf nodes not appearing in Q or e
         self._node_pruning(set.union(Q, E))
 
-    @staticmethod
-    def marginalizing(
-        f: pd.DataFrame,
-        X: str) -> pd.DataFrame:
-        """
-        Given a factor and a variable X, compute the CPT in which X is summed-out.
-
-        :param f: the factor to maginalize.
-        :param X: name of the variable to sum out.
-        """
-
-        # e.g. ['B', 'C', 'D']
-        all_vars = [v for v in f.columns.values.tolist() if v != "p"]
-        # e.g. ['B', 'C']
-        new_vars = [v for v in all_vars if v not in set([X, "p"])]
-
-        cpt = pd.DataFrame([], columns=new_vars + ["p"])
-        data = {}
-        for idx, row in f.iterrows():
-            key = row[new_vars].to_string()  # string representing vals in rows
-            # store index of row with these values that has max p value
-            if key not in data:
-                data[key] = []
-            data[key].append(idx)
-
-        idx_lists = list(data.values())  # list of row indices to keep
-        for indices in idx_lists:
-            # indices is a list of row indices in f where new_vars are identical
-            p = sum(f.loc[indices, "p"])
-            vals = f.loc[indices[0], new_vars].tolist()
-            # add new row to final cpt
-            # cpt = cpt.append(vals + [p], columns=new_vars + ["p"])
-            cpt = cpt.append(
-                pd.Series(vals + [p], index=cpt.columns), ignore_index=True
-            )
-
-        cpt = cpt.reset_index(drop=True)
-        return deepcopy(cpt)  # just in case
 
     @staticmethod
     def marginalize(
@@ -218,38 +180,7 @@ class BNReasoner:
         cpt = f.groupby(vars).sum().reset_index()
         return cpt.drop(X, axis=1)
 
-    @staticmethod
-    def maxing_out(f: pd.DataFrame, X: str):
-        """
-        Given a factor and a variable X, compute the CPT in which X is maxed-out.
-        Keep track of which instantiation of X led to the maximized value.
-
-        :param f: the factor to max-out.
-        :param X: name of the variable to max-out.
-        """
-        # e.g. ['B', 'C', 'D']
-        all_vars = [v for v in f.columns.values.tolist() if v != "p"]
-        # e.g. ['B', 'C']
-        new_vars = [v for v in all_vars if v not in set([X, "p"])]
-
-        # cpt = pd.DataFrame([], columns=new_vars + ["p"])
-        data = {}
-        for idx, row in f.iterrows():
-            key = row[new_vars].to_string()  # string representing vals in rows
-            # store index of row with these values that has max p value
-            if key not in data:
-                data[key] = idx
-            else:
-                if f.loc[data[key], "p"] < row["p"]:
-                    data[key] = idx  # found row (of same vals) with larger p
-
-        keep_idxs = list(data.values())  # list of row indices to keep
-        cpt = deepcopy(f.loc[keep_idxs, :])
-        del cpt[X]
-        cpt.reindex()
-        cpt = cpt.reset_index(drop=True)
-        return cpt
-
+    #TODO: max_out returns dataframe and series?!
     @staticmethod
     def max_out(f: pd.DataFrame, X: str) -> pd.DataFrame:
         """
@@ -260,13 +191,12 @@ class BNReasoner:
         :param X: name of the variable to max-out.
         """
         vars = [v for v in f.columns if v not in set([X, "p"])]
-
-        cpt = f.groupby(vars).max().reset_index()
-        # print(cpt)
+        cpt = f.groupby(vars)['p'].idxmax()
+        cpt = f.loc[cpt]
+        cpt = cpt.reset_index(drop=True)
 
         # keep track of instantiations
         extended = cpt.iloc[:,-2]
-        # print(extended)
 
         # remove X column from dataframe
         cpt = cpt.drop(X, axis=1)
@@ -472,16 +402,21 @@ class BNReasoner:
 
         # step 2: repeatedly multiply and sum out
         map = self.variable_elimination(Q, ordering_method)
-        # print('map', map)
 
         all_cpts = list(self.bn.get_all_cpts().values())
 
+        extended_factors = []
         # step 3: max out Q
-        for i, var in enumerate(Q):
+        for var in ['I', 'J']:
+            print(var)
             cpt = self.bn.get_cpt(var)
+            print('cpt', cpt)
             map = self.multiply_factors(map, cpt)
+            print('map', map)
             map, extended = self.max_out(map, var)
-            # print('map', map)
+            print('map', map)
+            print('extended', extended)
+            extended_factors.append(extended)
             # print(isinstance(map, pd.DataFrame))
 
         return map, extended
