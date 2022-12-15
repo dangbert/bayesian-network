@@ -188,13 +188,18 @@ class BNReasoner:
         :param X: name of the variable to max-out.
         """
         vars = [v for v in f.columns if v not in set([X, "p"])]
+
+        if not vars:
+            # index = f.Value.argmax()
+            # return f.iloc[f.Value.argmax(), 0:2]
+            return f[f["p"] == f["p"].max()]
+
         cpt = f.groupby(vars)["p"].idxmax()
         cpt = f.loc[cpt]
         cpt = cpt.reset_index(drop=True)
 
         # keep track of instantiations
         extended = cpt.iloc[:, -2]
-
         # remove X column from dataframe
         cpt = cpt.drop(X, axis=1)
 
@@ -211,7 +216,6 @@ class BNReasoner:
         merge_on = list(f.columns & g.columns)
         merge_on.remove("p")
 
-        # https://stackoverflow.com/questions/54657907/pandas-merging-two-dataframes-on-multiple-columns-and-multiplying-result
         h = f.merge(g, on=merge_on, how="outer")
         h["p"] = h["p_x"] * h["p_y"]
 
@@ -222,7 +226,6 @@ class BNReasoner:
         Suggests the order by which to sum out vars (according to the desired heuristic/method).
         Note that when computing the ordering, in the case of a tie (e.g. two nodes have
         the same degree) alphabetical order is used as the tie-breaker.
-        # TODO: consider merging get_ordering into "variable elimination" function?
         """
         net = deepcopy(self.bn)
         to_remove = set(vars)

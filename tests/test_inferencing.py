@@ -124,6 +124,9 @@ def test_MAP():
     # import pdb; pdb.set_trace()
     prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
     expected = pd.Series({"I": True, "J": False})
+
+    # import pdb; pdb.set_trace()
+
     assert_frame_equal(expected, asn)
     assert prob == 0.242720
 
@@ -133,9 +136,9 @@ def test_MAP():
     assert prob == 0.242720
 
     # old map test
-    ''' prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
+    """ prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
     expected = pd.DataFrame([0.242720], columns=['p'])
-    assert_frame_equal(expected, prob)'''
+    assert_frame_equal(expected, prob)"""
 
     # TODO: add test from workgroup?
 
