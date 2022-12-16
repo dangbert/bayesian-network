@@ -347,13 +347,14 @@ class BNReasoner:
 
         :returns: dataframe containing P(not Q|e) and P(Q|e)
         """
+        br = self.deepcopy()  # create deep copy of self we can destructively edit
         # reduce all factors w.r.t. e
-        self._apply_evidence(e, condition=True)
+        br._apply_evidence(e, condition=True)
 
         # TODO: what if  Q = X? (add test for this)
 
         # compute joint marginal PR (Q & e) via variable elim
-        joint_marginal = self.variable_elimination(Q, ordering_method)
+        joint_marginal = br.variable_elimination(Q, ordering_method)
 
         if not e.empty:
 
@@ -386,9 +387,7 @@ class BNReasoner:
         ordering = br.get_ordering(Q, ordering_method)
         all_cpts = list(br.bn.get_all_cpts().values())
 
-        # ins = deepcopy(e)  # instantiations
         # now we do variable_elimination but by maxing_out
-        # ins = dict(e)
         res = None
         for var in ordering:
             # find all cpts containing var

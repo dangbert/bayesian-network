@@ -24,6 +24,7 @@ from random_network import get_random_model
 from BayesNet import BayesNet
 from BNReasoner import BNReasoner, Ordering
 
+import pandas as pd
 from examples import visualize, USE_CASE_FILE
 
 RAND_NETWORK_OPTIONS = {
@@ -31,7 +32,6 @@ RAND_NETWORK_OPTIONS = {
     "edge_prob": 0.45,
     "n_states": 2,
 }
-
 
 """
 What's the effect of the min degree vs min fill heuristic
@@ -78,7 +78,7 @@ MARGINAL_QUERIES = [
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Runs and experiment, comparing different sat solver strategies."
+        description="Runs an experiment, saves data, and lets you reload it later."
     )
 
     parser.add_argument(
@@ -89,6 +89,14 @@ def main():
     )
     parser.add_argument(
         "-m", "--message", type=str, help="description of experiment (to save)"
+    )
+
+    parser.add_argument(
+        "-s",
+        "--samples",
+        type=int,
+        default=10,
+        help="num types to repeat each query (averaging results)",
     )
 
     parser.add_argument(
@@ -144,8 +152,11 @@ def main():
         .strip()
     )
     msg = args.message if args.message else ""
+    args.dataset = os.path.abspath(args.dataset)
     with open(os.path.join(outdir, "about.txt"), "w") as f:
-        f.write(f"{msg}\n{GIT_HASH}\n")
+        f.write(
+            f"{msg}\nsamples={args.samples}\ndataset='{args.dataset}'\n{GIT_HASH}\n"
+        )
 
     # run experiment
     outpath = os.path.join(outdir, "stats.json")
@@ -153,49 +164,62 @@ def main():
     assert len(nets) > 0, f"found only {len(nets)} networks in dataset"
     logging.info(f"loaded {len(nets)} networks in dataset")
 
-    stats = run_experiment(outpath, nets)
+    stats = run_experiment(outpath, nets, args.samples)
     process_stats(stats, outdir)
 
 
-def run_experiment(outpath: str, nets: List[BayesNet]) -> Dict:
-    # gather list of puzzle (systems) across files
-    all_stats = {"RQ1:": {}}
-
+def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
     def write_stats():
         nonlocal outpath
-        nonlocal all_stats
+        nonlocal stats
         if outpath is not None:
             with open(outpath, "w") as f:
-                json.dump(all_stats, f, indent=2)  # write indented json to file
+                json.dump(stats, f, indent=2)  # write indented json to file
                 logging.info(f"wrote latest stats to: {os.path.abspath(outpath)}")
 
     # RQ1
-    all_stats["RQ1"] = {}
+    stats = {"RQ1": {"samples_per_query": samples, "nets": len(nets)}}
+    table = pd.DataFrame(
+        # {str(Ordering.MIN_DEG.value): [], str(Ordering.MIN_FILL.value): []}
+    )
     for method in [Ordering.MIN_DEG, Ordering.MIN_FILL]:
-        method_stats = {"times": []}
+        # method_stats = {"times": []}
         logging.info(f"method={str(method.value)}")
+        avg_times = []
         for n, net in enumerate(nets):
+            logging.info(
+                f"running net {n}, on {len(ELIMINATION_QUERIES)} queries (for {samples} samples per query)\n"
+            )
+            times = []
             for i, vars in enumerate(ELIMINATION_QUERIES):
-                logging.info(f"\nnet {n}, query {i}")
-                br = BNReasoner(deepcopy(net))
-                cpu_time = time.process_time()
-                all_vars = set(br.bn.get_all_variables())
-                assert set(vars).issubset(all_vars)
+                for _ in range(samples):
+                    br = BNReasoner(deepcopy(net))
+                    cpu_time = time.process_time()
+                    all_vars = set(br.bn.get_all_variables())
+                    assert set(vars).issubset(all_vars)
 
-                Q = all_vars - set(vars)
-                res = br.variable_elimination(Q, method=method)
-                cpu_time = time.process_time() - cpu_time
-                method_stats["times"].append(cpu_time)
+                    Q = all_vars - set(vars)
+                    res = br.variable_elimination(Q, method=method)
+                    cpu_time = time.process_time() - cpu_time
+                    times.append(cpu_time)
 
-        all_stats["RQ1"][str(method.value)] = method_stats
+            # compute average time per query (across suite of queries ran `samples` times)
+            avg_time = sum(times) / len(times)
+            # cur.loc[cur.index.max() + 1] = avg_time
+            # cur = cur.append(pandas.Series())
+            avg_times.append(avg_time)
+
+        cur = pd.Series(avg_times, name=str(method.value))
+        table[str(method.value)] = cur
+
+    # serialize resulting dataframe
+    stats["RQ1"]["table"] = table.to_dict()
 
     # TODO: now do RQ2
 
-    # TODO: now do set of interesting_queries on USE_CASE_FILE?
-
+    # NOTE: see task3.py for some interesting_queries on USE_CASE_FILE
     write_stats()
-
-    return all_stats
+    return stats
 
 
 def load_networks(dataset_dir: str, view: bool = False) -> List[BayesNet]:
@@ -204,7 +228,7 @@ def load_networks(dataset_dir: str, view: bool = False) -> List[BayesNet]:
     logging.info(f"loading networks: '{pattern}'")
 
     nets = []
-    for fname in glob.glob(pattern):
+    for fname in sorted(glob.glob(pattern)):
         logging.info(f"loading: '{fname}'")
         net = BayesNet()
         net.load_from_bifxml(fname)
@@ -232,8 +256,15 @@ def generate_networks(
 
 
 def process_stats(stats: Dict, outdir: str):
+    """Process stats, storing an results in outdir."""
     logging.info(f"processing stats...\n")
-    # TODO
+
+    # load dataframe for RQ1
+    rq1_table = pd.DataFrame.from_dict(stats["RQ1"]["table"])
+    print("RQ1 table:")
+    print(rq1_table)
+
+    # TODO: make some graphs / do some stats here
 
     # graph_out = os.path.join(outdir, f"graphs.pdf")
     # plt.savefig(graph_out, dpi=400)

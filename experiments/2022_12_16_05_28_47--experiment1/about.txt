@@ -1,0 +1,4 @@
+experiment1
+samples=10
+dataset='/home/dan/Downloads/COURSES/Fall_2022/KR/bayesian-network/experiments/dataset'
+3c5d672
