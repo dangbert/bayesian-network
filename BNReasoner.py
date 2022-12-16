@@ -303,6 +303,7 @@ class BNReasoner:
         """
         Sum out a given set of variables (all_vars - Q) by using variable elimination. Calculate
         and return prior marginal.
+        TODO: should be consistent about naming "method" vs "ordering_method" working.
         """
         ordered = self.get_ordering(self._non_queried_variables(Q), method)
 
@@ -313,17 +314,17 @@ class BNReasoner:
             # find all cpts containing var
             rel_cpts = [cpt for cpt in all_cpts if var in cpt.columns]
 
-            # multiply all factors containg var
-            # if Q == {"5", "0", "7", "9", "1", "4"}:
-            #    import pdb
-
-            #    pdb.set_trace()
             for cpt in rel_cpts:
                 if res is None:
                     res = cpt
                     continue
                 res = BNReasoner.multiply_factors(res, cpt)
 
+            # if len(res.columns) - 1 == len(Q):
+            #    import pdb
+
+            #    pdb.set_trace()
+            #    return res
             # sum out
             res = BNReasoner.marginalize(res, var)
             # print(f"after summed out\n{res}")

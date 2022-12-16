@@ -73,7 +73,7 @@ def interesting_queries(ordering_method: Ordering):
     # )
 
     res = br.marginal_distribution(
-        {"arriving-on-time", "woman"},
+        {"on-time"},
         pd.Series({"bad-weather": True}),
         ordering_method=ordering_method,
     )

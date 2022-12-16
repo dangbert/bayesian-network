@@ -169,6 +169,11 @@ def main():
 
 
 def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
+    rq1 = False
+    rq2 = True
+
+    stats = {}
+
     def write_stats():
         nonlocal outpath
         nonlocal stats
@@ -177,45 +182,97 @@ def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
                 json.dump(stats, f, indent=2)  # write indented json to file
                 logging.info(f"wrote latest stats to: {os.path.abspath(outpath)}")
 
-    # RQ1
-    stats = {"RQ1": {"samples_per_query": samples, "nets": len(nets)}}
-    table = pd.DataFrame(
-        # {str(Ordering.MIN_DEG.value): [], str(Ordering.MIN_FILL.value): []}
-    )
-    for method in [Ordering.MIN_DEG, Ordering.MIN_FILL]:
-        # method_stats = {"times": []}
-        logging.info(f"method={str(method.value)}")
-        avg_times = []
-        for n, net in enumerate(nets):
-            logging.info(
-                f"running net {n}, on {len(ELIMINATION_QUERIES)} queries (for {samples} samples per query)\n"
-            )
-            times = []
-            for i, vars in enumerate(ELIMINATION_QUERIES):
-                for _ in range(samples):
-                    br = BNReasoner(deepcopy(net))
-                    cpu_time = time.process_time()
-                    all_vars = set(br.bn.get_all_variables())
-                    assert set(vars).issubset(all_vars)
+    # RQ1:
+    if rq1:
+        stats["RQ1"] = {"samples_per_query": samples, "nets": len(nets)}
+        table = pd.DataFrame(
+            # {str(Ordering.MIN_DEG.value): [], str(Ordering.MIN_FILL.value): []}
+        )
+        for method in [Ordering.MIN_DEG, Ordering.MIN_FILL]:
+            # method_stats = {"times": []}
+            logging.info(f"method={str(method.value)}")
+            avg_times = []
+            for n, net in enumerate(nets):
+                logging.info(
+                    f"running net {n}, on {len(ELIMINATION_QUERIES)} queries (for {samples} samples per query)\n"
+                )
+                times = []
+                for i, vars in enumerate(ELIMINATION_QUERIES):
+                    for _ in range(samples):
+                        br = BNReasoner(deepcopy(net))
+                        cpu_time = time.process_time()
+                        all_vars = set(br.bn.get_all_variables())
+                        assert set(vars).issubset(all_vars)
 
-                    Q = all_vars - set(vars)
-                    res = br.variable_elimination(Q, method=method)
-                    cpu_time = time.process_time() - cpu_time
-                    times.append(cpu_time)
+                        Q = all_vars - set(vars)
+                        res = br.variable_elimination(Q, method=method)
+                        cpu_time = time.process_time() - cpu_time
+                        times.append(cpu_time)
 
-            # compute average time per query (across suite of queries ran `samples` times)
-            avg_time = sum(times) / len(times)
-            # cur.loc[cur.index.max() + 1] = avg_time
-            # cur = cur.append(pandas.Series())
-            avg_times.append(avg_time)
+                # compute average time per query (across suite of queries ran `samples` times)
+                avg_time = sum(times) / len(times)
+                # cur.loc[cur.index.max() + 1] = avg_time
+                # cur = cur.append(pandas.Series())
+                avg_times.append(avg_time)
 
-        cur = pd.Series(avg_times, name=str(method.value))
-        table[str(method.value)] = cur
+            cur = pd.Series(avg_times, name=str(method.value))
+            table[str(method.value)] = cur
 
-    # serialize resulting dataframe
-    stats["RQ1"]["table"] = table.to_dict()
+        # serialize resulting dataframe
+        stats["RQ1"]["table"] = table.to_dict()
 
-    # TODO: now do RQ2
+    # RQ2:
+    if rq2:
+        logging.info("starting RQ2:")
+        ordering_method = Ordering.MIN_FILL
+        stats["RQ2"] = {
+            "samples_per_query": samples,
+            "nets": len(nets),
+            "ordering_method": str(ordering_method.value),
+        }
+        for prune in [True, False]:
+            avg_times = []
+            for n, net in enumerate(nets):
+                logging.info(
+                    f"running net {n}, on {len(MARGINAL_QUERIES)} queries (for {samples} samples per query [method={ordering_method.value}, pruning={prune}])\n"
+                )
+                times = []
+                for i, query in enumerate(MARGINAL_QUERIES):
+                    Q, e = set(query["Q"]), pd.Series(query["E"])
+
+                    for _ in range(samples):
+                        br = BNReasoner(deepcopy(net))
+                        all_vars = set(br.bn.get_all_variables())
+                        assert Q.issubset(all_vars)
+
+                        # note: pruning won't count as part of time
+                        if prune:
+                            br.network_pruning(Q, e)
+
+                        cpu_time = time.process_time()
+                        try:
+                            res = br.marginal_distribution(
+                                Q, e, ordering_method=ordering_method
+                            )
+                        except ValueError as err:
+                            import pdb
+
+                            pdb.set_trace()
+                            print(err)
+                        cpu_time = time.process_time() - cpu_time
+                        times.append(cpu_time)
+
+                # compute average time per query (across suite of queries ran `samples` times)
+                avg_time = sum(times) / len(times)
+                # cur.loc[cur.index.max() + 1] = avg_time
+                # cur = cur.append(pandas.Series())
+                avg_times.append(avg_time)
+
+            cur = pd.Series(avg_times, name=str(method.value))
+            table[str(method.value)] = cur
+
+        # serialize resulting dataframe
+        stats["RQ2"]["table"] = table.to_dict()
 
     # NOTE: see task3.py for some interesting_queries on USE_CASE_FILE
     write_stats()
