@@ -183,10 +183,6 @@ def run_experiment(outpath: str, nets: List[BayesNet]) -> Dict:
                 assert set(vars).issubset(all_vars)
 
                 Q = all_vars - set(vars)
-                if i == 1:
-                    import pdb
-
-                    pdb.set_trace()
                 res = br.variable_elimination(Q, method=method)
                 cpu_time = time.process_time() - cpu_time
                 method_stats["times"].append(cpu_time)

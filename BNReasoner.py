@@ -5,8 +5,10 @@ import pandas as pd
 from copy import deepcopy
 from enum import Enum
 
-# Evidence = Dict[str, Any]
 Evidence = pd.Series  # e.g.: pd.Series({"A": True, "B": False})
+
+# prefix used to denote columns representing a known instantiation
+INS = "_ins_"
 
 
 class Ordering(Enum):
@@ -145,6 +147,7 @@ class BNReasoner:
             # also filter down rows of var (and reset index to play nice with tests)
             cpt = self.bn.get_cpt(var)
             cpt = (cpt[cpt[var] == value]).reset_index(drop=True)
+            # TODO: set prob to 1.0 for every remaining row in cpt?
             self.bn.update_cpt(var, cpt)
 
     def network_pruning(self, Q: MutableSet[str], e: Evidence) -> None:
@@ -178,15 +181,17 @@ class BNReasoner:
         return cpt.drop(X, axis=1)
 
     @staticmethod
-    def max_out(f: pd.DataFrame, X: str) -> Tuple[pd.DataFrame, pd.Series]:
+    def max_out(f: pd.DataFrame, X: str) -> pd.DataFrame:
         """
         Given a factor and a variable X, compute the CPT in which X is maxed-out.
-        Keep track of which instantiation of X led to the maximized value.
+        Keeps track of which instantiation of X led to the maximized value (by storing it in a column named f"{INS}{X}").
 
         :param f: the factor to max-out.
         :param X: name of the variable to max-out.
         """
-        vars = [v for v in f.columns if v not in set([X, "p"])]
+        vars = [
+            v for v in f.columns if v not in set([X, "p"]) and not v.startswith(INS)
+        ]
 
         # cpt = f.groupby(vars)["p"].max().reset_index()
         max_index = f.groupby(vars)["p"].idxmax()
@@ -197,10 +202,9 @@ class BNReasoner:
         extended = cpt[X]
         # remove X column from dataframe
         cpt = cpt.drop(X, axis=1)
-
-        extended = extended.map(lambda v: {extended.name: v})
-        extended.name = None
-        return cpt, extended
+        # add column to end denoting instations of X
+        cpt[f"{INS}{X}"] = extended
+        return cpt
 
     @staticmethod
     def multiply_factors(f: pd.DataFrame, g: pd.DataFrame) -> pd.DataFrame:
@@ -213,9 +217,11 @@ class BNReasoner:
         merge_on = list(f.columns & g.columns)
         merge_on.remove("p")
 
-        h = f.merge(g, on=merge_on, how="outer")
+        if len(merge_on) > 0:
+            h = f.merge(g, on=merge_on, how="outer")
+        else:
+            h = f.merge(g, how="cross")
         h["p"] = h["p_x"] * h["p_y"]
-
         return h.drop(["p_x", "p_y"], axis=1)
 
     def get_ordering(self, vars: MutableSet[str], method: Ordering) -> List[str]:
@@ -316,16 +322,7 @@ class BNReasoner:
                 if res is None:
                     res = cpt
                     continue
-                # TODO: fix this:
-                try:
-                    res = BNReasoner.multiply_factors(res, cpt)
-                except ValueError as e:
-                    print(e)
-                    import pdb
-
-                    pdb.set_trace()
-                    print(e)
-                    raise e
+                res = BNReasoner.multiply_factors(res, cpt)
 
             # sum out
             res = BNReasoner.marginalize(res, var)
@@ -336,7 +333,7 @@ class BNReasoner:
 
         # print(f"final_cpt:\n {cpt}")
         return res
-        # TODO: actually return this:
+        # TODO: consider actually returning this:
         return [res] + all_cpts
 
     def marginal_distribution(
@@ -368,7 +365,9 @@ class BNReasoner:
 
         return joint_marginal
 
-    def MPE(self, e: Evidence, ordering_method=Ordering.MIN_DEG) -> Tuple[float, Dict]:
+    def MPE(
+        self, e: Evidence, ordering_method=Ordering.MIN_DEG
+    ) -> Tuple[float, Evidence]:
         """
         Given evidence e, compute the most probable explanation.
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
@@ -378,17 +377,19 @@ class BNReasoner:
         """
         br = self.deepcopy()  # create deep copy of self we can destructively edit
 
-        all_vars = set(self.bn.get_all_variables())
+        all_vars = set(br.bn.get_all_variables())
         known_vars = set(list(e.keys()))
         Q = all_vars - known_vars  # list of unknown vars
         br.network_pruning(Q, e)  # (also applies evidence)
 
         # compute an ordering for variable removal
         ordering = br.get_ordering(Q, ordering_method)
-        all_cpts = list(self.bn.get_all_cpts().values())
+        all_cpts = list(br.bn.get_all_cpts().values())
 
-        res = None
+        # ins = deepcopy(e)  # instantiations
         # now we do variable_elimination but by maxing_out
+        # ins = dict(e)
+        res = None
         for var in ordering:
             # find all cpts containing var
             rel_cpts = [cpt for cpt in all_cpts if var in cpt.columns]
@@ -401,17 +402,35 @@ class BNReasoner:
                 res = BNReasoner.multiply_factors(res, cpt)
 
             # max out var
-            res, ins = BNReasoner.max_out(res, var)
-            # import pdb
-
-            # pdb.set_trace()
+            res = BNReasoner.max_out(res, var)
 
             # update list of remaining cpts
             all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
 
+        # final pass through remaining CPTs
+        for cpt in all_cpts:
+            res = BNReasoner.multiply_factors(res, cpt)
+        for i, var in enumerate(e.keys()):
+            if i != len(e.keys()) - 1:
+                res = BNReasoner.max_out(res, var)
+            else:
+                # can't max_out last var cause its the only one left!
+                max_idx = res["p"].idxmax()
+                res = res.iloc[max_idx : (max_idx + 1)]
+                res = res.rename(columns={var: f"{INS}{var}"})
+
+        assert len(res) == 1, f"expect 1 row left, found {len(res)}"
+        p = res["p"][0]
+        ins = {}
+        for c in list(res.columns):
+            if c.startswith(INS):
+                ins[c[len(INS) :]] = res[c][0]
+        ins = pd.Series(ins).sort_index()
+        return p, ins
+
     def MAP(
         self, Q: MutableSet[str], e: Evidence, ordering_method=Ordering.MIN_DEG
-    ) -> Tuple[float, Dict]:
+    ) -> Tuple[float, Evidence]:
         """
         Compute the maximum a-posteriori instantiation + value of query variables Q given (possibly empty) evidence e.
 
@@ -425,23 +444,33 @@ class BNReasoner:
         br._apply_evidence(e, condition=True)
 
         # step 2: repeatedly multiply and sum out
-        map = br.variable_elimination(Q, ordering_method)
+        res = br.variable_elimination(Q, ordering_method)
 
         # all_cpts = list(br.bn.get_all_cpts().values())
 
         # step 3: max out Q
         for var in Q:
             cpt = br.bn.get_cpt(var)
-            map = self.multiply_factors(map, cpt)
+            res = self.multiply_factors(res, cpt)
 
-            if len(map.columns) > 2:
-                map, extended = br.max_out(map, var)
+            if len([c for c in res.columns if not c.startswith(INS)]) > 2:
+                res = br.max_out(res, var)
             else:
-                # we have just one var in map
-                max_idx = map["p"].idxmax()
-                p = map["p"][max_idx]
+                # can't max_out last var cause its the only one left!
+                max_idx = res["p"].idxmax()
+                res = res.iloc[max_idx : (max_idx + 1)]
+                res = res.rename(columns={var: f"{INS}{var}"})
 
-                extended = extended[max_idx]
-                extended[var] = map[var][max_idx]
+        assert len(res) == 1, f"expect 1 row left, found {len(res)}"
+        p = res["p"][0]
+        ins = {}
+        for c in list(res.columns):
+            if c.startswith(INS):
+                ins[c[len(INS) :]] = res[c][0]
+        ins = pd.Series(ins).sort_index()
+        return p, ins
 
-                return p, extended
+    # @staticmethod
+    # def separate_instantations(f: pd.DataFrame) -> Tuple[pd.DataFrame, Evidence]:
+    #    """Given a dataframe of one row that contains instation columns, split it into a DataFrame with no instantiations, and a Series with the instantations."""
+    #    assert len(f) == 1

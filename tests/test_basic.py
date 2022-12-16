@@ -1,5 +1,5 @@
 from tests.conftest import DOG_FILE, LEC1_FILE, LEC2_FILE, compare_frames
-from BNReasoner import BNReasoner, Ordering
+from BNReasoner import BNReasoner, Ordering, INS
 from BayesNet import BayesNet
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
@@ -135,47 +135,44 @@ def test_marginalization():
 def test_maxing_out():
     # TEST 1
     cpt = copy.deepcopy(FACTOR_EX3)
-    res, asn = BNReasoner.max_out(cpt, "D")
-    expected_res = pd.DataFrame(
+    res = BNReasoner.max_out(cpt, "D")
+    expected = pd.DataFrame(
         {
             "B": [False, False, True, True],
             "C": [False, True, False, True],
             "p": [1.0, 0.8, 0.9, 0.95],
+            f"{INS}D": [False, True, True, True],
         }
     )
-    expected_asn = pd.Series([{"D": False}, {"D": True}, {"D": True}, {"D": True}])
-    assert_frame_equal(res, expected_res)
-    assert_series_equal(asn, expected_asn)
+    assert_frame_equal(res, expected)
 
     # TEST 2:
     cpt = copy.deepcopy(FACTOR_EX1)
-    res, asn = BNReasoner.max_out(cpt, "hear-bark")
-    expected_res = pd.DataFrame(
+    res = BNReasoner.max_out(cpt, "hear-bark")
+    expected = pd.DataFrame(
         {
             "dog-out": [False, True],
             "p": [0.7, 0.99],
+            f"{INS}hear-bark": [False, True],
         }
     )
-    expected_asn = pd.Series([{"hear-bark": False}, {"hear-bark": True}])
-    assert_frame_equal(res, expected_res)
-    assert_series_equal(asn, expected_asn)
+    assert_frame_equal(res, expected)
 
     # TEST 3
     cpt = copy.deepcopy(FACTOR_EX1)
-    res, assignments = BNReasoner.max_out(cpt, "dog-out")
-    expected_res = pd.DataFrame(
+    res = BNReasoner.max_out(cpt, "dog-out")
+    expected = pd.DataFrame(
         {
             "hear-bark": [False, True],
             "p": [0.7, 0.99],
+            f"{INS}dog-out": [False, True],
         }
     )
 
-    expected_asn = pd.Series([{"dog-out": False}, {"dog-out": True}])
-    assert_frame_equal(res, expected_res)
-    assert_series_equal(assignments, expected_asn)
+    assert_frame_equal(res, expected)
 
 
-def test_multiply_factors():
+def test_multiply_factors__related():
     # from "multiplication of factors" slides:
     f1 = copy.deepcopy(FACTOR_EX3)
     f2 = pd.DataFrame(
@@ -194,6 +191,31 @@ def test_multiply_factors():
     assert (res == np.array([True, True, True, False, 0.95 * 0.192])).all(1).any()
     assert (res == np.array([True, True, False, True, 0.05 * 0.112])).all(1).any()
     assert (res == np.array([False, False, False, False, 0.248])).all(1).any()
+
+
+def test_multiply_factors__unrelated():
+    """Test multiplying factors that have no vars in common."""
+    f1 = pd.DataFrame(
+        {
+            "A": [True, False],
+            "p": [0.8, 0.1],
+        }
+    )
+    f2 = pd.DataFrame(
+        {
+            "B": [True, False],
+            "p": [0.5, 0.25],
+        }
+    )
+    expected = pd.DataFrame(
+        {
+            "A": [True, True, False, False],
+            "B": [True, False, True, False],
+            "p": [0.4, 0.2, 0.05, 0.025],
+        }
+    )
+    res = BNReasoner.multiply_factors(f1, f2)
+    assert_frame_equal(res, expected)
 
 
 def test_network_pruning():

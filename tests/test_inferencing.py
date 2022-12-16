@@ -1,7 +1,8 @@
 from BNReasoner import BNReasoner, Ordering
 from BayesNet import BayesNet
 import pandas as pd
-from pandas.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal, assert_series_equal
+from numpy.testing import assert_approx_equal
 from tests.conftest import LEC2_FILE
 import copy
 
@@ -100,18 +101,14 @@ def test_MPE():
     e = pd.Series({"J": True, "O": False})
     prob, asn = br.MPE(e, ordering_method=Ordering.MIN_DEG)
 
-    # expected = pd.Series({"I": False, "J": True, "O": False, "X": False, "Y": False})
-    expected = {"I": False, "J": True, "O": False, "X": False, "Y": False}
-    assert_frame_equal(expected, asn)
-    assert prob == 0.2304225
+    expected = pd.Series({"I": False, "J": True, "O": False, "X": False, "Y": False})
+    assert_approx_equal(prob, 0.2304225)
+    assert_series_equal(expected, asn)
 
     # should get same result regardless of ordering method
-    assignments, prob = br.MPE(e, ordering_method=Ordering.MIN_FILL)
-    assert_frame_equal(expected, asn)
-    assert prob == 0.2304225
-
-    # TODO: consider mocking/hacking the ordering function to return the same order as in the slides...
-    # and test this out piece by piece...
+    prob, asn = br.MPE(e, ordering_method=Ordering.MIN_FILL)
+    assert_approx_equal(prob, 0.2304225)
+    assert_series_equal(expected, asn)
 
     # TODO: add test from workgroup?
 
@@ -125,15 +122,15 @@ def test_MAP():
     prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
     # here we slightly differ from the slide because there's a tie of I being True or False
     #  we take I as False arbitrarily rather than True
-    expected = {"I": False, "J": False}
+    exp_asn = pd.Series({"I": False, "J": False})
 
-    assert expected == asn
-    assert prob == 0.242720
+    assert_approx_equal(prob, 0.242720)
+    assert_series_equal(exp_asn, asn)
 
     # should get same result regardless of ordering method
     prob, asn = br.MAP(Q, e, ordering_method=Ordering.MIN_FILL)
-    assert expected == asn
-    assert prob == 0.242720
+    assert_approx_equal(prob, 0.242720)
+    assert_series_equal(exp_asn, asn)
 
     # old map test
     """ prob = br.MAP(Q, e, ordering_method=Ordering.MIN_DEG)
