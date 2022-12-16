@@ -1,0 +1,4 @@
+RQ2
+samples=10
+dataset='/home/dan/Downloads/COURSES/Fall_2022/KR/bayesian-network/experiments/dataset'
+f4cc681

@@ -1,9 +1,10 @@
 from BNReasoner import BNReasoner, Ordering
 from BayesNet import BayesNet
+import os
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
 from numpy.testing import assert_approx_equal
-from tests.conftest import LEC2_FILE
+from tests.conftest import LEC2_FILE, ROOT_DIR
 import copy
 
 df_a = pd.DataFrame(
@@ -93,6 +94,30 @@ def test_marginal_dist__prior():
         }
     )
     assert_frame_equal(expected, res, check_dtype=False)
+
+
+def test_marginal_dist__hard():
+    """Test marginal dist behaves the same after newtork pruning!"""
+    bif_file = os.path.join(ROOT_DIR, "experiments/dataset/random00.bifxml")
+    assert os.path.isfile(bif_file)
+    orig = BNReasoner(bif_file)
+
+    query = {"Q": ["7"], "E": {"2": False, "0": True}}
+    Q, e = set(query["Q"]), pd.Series(query["E"])
+
+    from examples import visualize
+
+    expected = orig.deepcopy().marginal_distribution(
+        Q, e, ordering_method=Ordering.MIN_FILL
+    )
+
+    # try pruning first!!
+    for i in range(20):
+        print(f"\n***i = {i}")
+        br = orig.deepcopy()
+        br.network_pruning(Q, e)
+        res = br.marginal_distribution(Q, e, ordering_method=Ordering.MIN_FILL)
+        assert_frame_equal(res, expected)
 
 
 def test_MPE():

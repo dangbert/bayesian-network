@@ -230,6 +230,7 @@ def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
             "nets": len(nets),
             "ordering_method": str(ordering_method.value),
         }
+        table = pd.DataFrame()
         for prune in [True, False]:
             avg_times = []
             for n, net in enumerate(nets):
@@ -240,6 +241,7 @@ def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
                 for i, query in enumerate(MARGINAL_QUERIES):
                     Q, e = set(query["Q"]), pd.Series(query["E"])
 
+                    logging.info(f"query = {i}")
                     for _ in range(samples):
                         br = BNReasoner(deepcopy(net))
                         all_vars = set(br.bn.get_all_variables())
@@ -258,7 +260,6 @@ def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
                             import pdb
 
                             pdb.set_trace()
-                            print(err)
                         cpu_time = time.process_time() - cpu_time
                         times.append(cpu_time)
 
@@ -268,8 +269,9 @@ def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
                 # cur = cur.append(pandas.Series())
                 avg_times.append(avg_time)
 
-            cur = pd.Series(avg_times, name=str(method.value))
-            table[str(method.value)] = cur
+            tname = f"pruned_{prune}"
+            cur = pd.Series(avg_times, name=tname)
+            table[tname] = cur
 
         # serialize resulting dataframe
         stats["RQ2"]["table"] = table.to_dict()
@@ -316,10 +318,23 @@ def process_stats(stats: Dict, outdir: str):
     """Process stats, storing an results in outdir."""
     logging.info(f"processing stats...\n")
 
-    # load dataframe for RQ1
-    rq1_table = pd.DataFrame.from_dict(stats["RQ1"]["table"])
-    print("RQ1 table:")
-    print(rq1_table)
+    if "RQ1" in stats:
+        # load dataframe for RQ1
+        rq1_table = pd.DataFrame.from_dict(stats["RQ1"]["table"])
+        print("RQ1 table:")
+        print(rq1_table)
+        outfile = os.path.join(outdir, "rq1.csv")
+        rq1_table.to_csv(outfile, index=False)
+        print(f"wrote: '{outfile}'")
+
+    if "RQ2" in stats:
+        # load dataframe for RQ1
+        rq2_table = pd.DataFrame.from_dict(stats["RQ2"]["table"])
+        print("RQ2 table:")
+        print(rq2_table)
+        outfile = os.path.join(outdir, "rq2.csv")
+        rq2_table.to_csv(outfile, index=False)
+        print(f"wrote: '{outfile}'")
 
     # TODO: make some graphs / do some stats here
 

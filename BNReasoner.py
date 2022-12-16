@@ -178,6 +178,11 @@ class BNReasoner:
         """
         vars = [v for v in f.columns if v not in set([X, "p"])]
         cpt = f.groupby(vars).sum().reset_index()
+
+        # max_index = f.groupby(vars)["p"].idxmax()
+        # cpt = f.loc[max_index]
+        # cpt = cpt.reset_index(drop=True)
+
         return cpt.drop(X, axis=1)
 
     @staticmethod
@@ -314,6 +319,13 @@ class BNReasoner:
             # find all cpts containing var
             rel_cpts = [cpt for cpt in all_cpts if var in cpt.columns]
 
+            # update list of remaining cpts
+            all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
+
+            if len(rel_cpts) <= 1:
+                # this node is by itself (has 0 interactions so its irrelevant from the inference so delete it)
+                continue
+
             for cpt in rel_cpts:
                 if res is None:
                     res = cpt
@@ -326,11 +338,14 @@ class BNReasoner:
             #    pdb.set_trace()
             #    return res
             # sum out
-            res = BNReasoner.marginalize(res, var)
-            # print(f"after summed out\n{res}")
+            try:
+                res = BNReasoner.marginalize(res, var)
+            except ValueError as err:
+                import pdb
 
-            # update list of remaining cpts
-            all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
+                pdb.set_trace()
+                print(err)
+            # print(f"after summed out\n{res}")
 
         # print(f"final_cpt:\n {cpt}")
         return res
@@ -355,17 +370,17 @@ class BNReasoner:
         # TODO: what if  Q = X? (add test for this)
 
         # compute joint marginal PR (Q & e) via variable elim
-        joint_marginal = br.variable_elimination(Q, ordering_method)
+        marginal = br.variable_elimination(Q, ordering_method)
 
         if not e.empty:
 
             # sum out C to get probability of e
-            prob_e = joint_marginal["p"].sum()
+            prob_e = marginal["p"].sum()
             # "normalize" to obtain Pr(Q, e) (see "Posterior Marginal" slides)
             #   cause for Bayes theorem you have to divide by p(e)
-            joint_marginal["p"] = joint_marginal["p"].div(prob_e)
+            marginal["p"] = marginal["p"].div(prob_e)
 
-        return joint_marginal
+        return marginal
 
     def MPE(
         self, e: Evidence, ordering_method=Ordering.MIN_DEG
