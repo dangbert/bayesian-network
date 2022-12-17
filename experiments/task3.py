@@ -65,19 +65,20 @@ def interesting_queries(ordering_method: Ordering):
     # but the querying methods shouldn't modify br)
     # visualize(br, node_size=500)
 
-    # TODO: debug why this one fails cause len(Q) == 1
-    # res = br.marginal_distribution(
-    #    {"arriving-on-time", "woman"},
-    #    pd.Series({"bad-weather": True}),
-    #    ordering_method=ordering_method
-    # )
+    res = br.marginal_distribution(
+        {"arriving-on-time", "woman"},
+        pd.Series({"bad-weather": True}),
+        ordering_method=ordering_method,
+    )
+    print("\nmarginal_dist query1:\n")
+    print(res)
 
     res = br.marginal_distribution(
         {"on-time"},
         pd.Series({"bad-weather": True}),
         ordering_method=ordering_method,
     )
-    print("\nmarginal_dist query:\n")
+    print("\nmarginal_dist query2:\n")
     print(res)
 
     # TODO: debug why this one also fails

@@ -322,15 +322,18 @@ class BNReasoner:
             # update list of remaining cpts
             all_cpts = [cpt for cpt in all_cpts if var not in cpt.columns]
 
-            if len(rel_cpts) <= 1:
-                # this node is by itself (has 0 interactions so its irrelevant from the inference so delete it)
-                continue
-
             for cpt in rel_cpts:
                 if res is None:
                     res = cpt
                     continue
                 res = BNReasoner.multiply_factors(res, cpt)
+
+            # len(rel_cpts) <= 1
+            if len(res.columns) == 2 and var in res.columns:
+                # this node is by itself (has 0 interactions so its irrelevant from the inference so delete it)
+                # ^it can't be summed out with marginalize()
+                res = None
+                continue
 
             # if len(res.columns) - 1 == len(Q):
             #    import pdb
@@ -338,13 +341,7 @@ class BNReasoner:
             #    pdb.set_trace()
             #    return res
             # sum out
-            try:
-                res = BNReasoner.marginalize(res, var)
-            except ValueError as err:
-                import pdb
-
-                pdb.set_trace()
-                print(err)
+            res = BNReasoner.marginalize(res, var)
             # print(f"after summed out\n{res}")
 
         # print(f"final_cpt:\n {cpt}")
@@ -375,7 +372,13 @@ class BNReasoner:
         if not e.empty:
 
             # sum out C to get probability of e
-            prob_e = marginal["p"].sum()
+            try:
+                prob_e = marginal["p"].sum()
+            except TypeError as err:
+                import pdb
+
+                pdb.set_trace()
+                print(err)
             # "normalize" to obtain Pr(Q, e) (see "Posterior Marginal" slides)
             #   cause for Bayes theorem you have to divide by p(e)
             marginal["p"] = marginal["p"].div(prob_e)
@@ -459,6 +462,8 @@ class BNReasoner:
         br._apply_evidence(e, condition=True)
 
         # step 2: repeatedly multiply and sum out
+        # rem_cpts = br.variable_elimination(Q, ordering_method)
+        # res = rem_cpts[0]
         res = br.variable_elimination(Q, ordering_method)
 
         # all_cpts = list(br.bn.get_all_cpts().values())
@@ -466,7 +471,7 @@ class BNReasoner:
         # step 3: max out Q
         for var in Q:
             cpt = br.bn.get_cpt(var)
-            res = self.multiply_factors(res, cpt)
+            res = BNReasoner.multiply_factors(res, cpt)
 
             if len([c for c in res.columns if not c.startswith(INS)]) > 2:
                 res = br.max_out(res, var)
@@ -476,12 +481,16 @@ class BNReasoner:
                 res = res.iloc[max_idx : (max_idx + 1)]
                 res = res.rename(columns={var: f"{INS}{var}"})
 
-        assert len(res) == 1, f"expect 1 row left, found {len(res)}"
         p = res["p"][0]
         ins = {}
+        remaining = set()
         for c in list(res.columns):
             if c.startswith(INS):
                 ins[c[len(INS) :]] = res[c][0]
+            elif c != "p":
+                remaining.add(c)
+        if len(remaining) > 0:
+            assert remaining == 0, f"sanity check extra vars = {remaining}"
         ins = pd.Series(ins).sort_index()
         return p, ins
 

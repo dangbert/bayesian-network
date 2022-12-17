@@ -169,7 +169,7 @@ def main():
 
 
 def run_experiment(outpath: str, nets: List[BayesNet], samples: int) -> Dict:
-    rq1 = False
+    rq1 = True
     rq2 = True
 
     stats = {}
