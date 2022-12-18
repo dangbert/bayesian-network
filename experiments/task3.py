@@ -6,6 +6,7 @@ from copy import deepcopy
 from enum import Enum
 import os
 from pgmpy.readwrite import XMLBIFReader
+import logging
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -33,7 +34,7 @@ def cpt_latex(fname: str):
     content = ""
     for var in vars:
         content += f"% {var}\n\n"
-        content += f"CPT for Node '{var}'\n"
+        content += f"CPT for Node '{var}':\n\n"
         cpt = bn.get_cpt(var)
         content += cpt.to_latex(index=False) + "\n"
 
@@ -46,6 +47,10 @@ def cpt_latex(fname: str):
 
 
 def main():
+    FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+    log_level = logging.DEBUG
+    logging.basicConfig(format=FORMAT, level=log_level)
+
     fname = os.path.join(SCRIPT_DIR, "tables.tex")
     cpt_latex(fname)
 
@@ -86,7 +91,7 @@ def interesting_queries(ordering_method: Ordering):
 
     model_infer = VariableElimination(model)
 
-    res = br.marginal_distribution(
+    res = br.deepcopy().marginal_distribution(
         {"woman"},
         pd.Series({}),
         ordering_method=ordering_method,
@@ -96,21 +101,21 @@ def interesting_queries(ordering_method: Ordering):
 
     # compare to result from pgmpy:
     fact = model_infer.query(variables=["woman"], evidence={})
-    import pdb
-
-    pdb.set_trace()
 
     print("pgympy result:")
     print(fact.variables)
     print(fact.values)
 
-    res = br.marginal_distribution(
-        {"arriving-on-time", "woman"},
+    res = br.deepcopy().marginal_distribution(
+        {"on-time", "woman"},
         pd.Series({"bad-weather": True}),
         ordering_method=ordering_method,
     )
     print("\nmarginal_dist query1:\n")
     print(res)
+    import pdb
+
+    pdb.set_trace()
 
     res = br.marginal_distribution(
         {"on-time"},
@@ -147,6 +152,8 @@ def interesting_queries(ordering_method: Ordering):
 
     pdb.set_trace()
 
+    # res = br.MAP(set(all_vars), pd.Series({}))
+    # fact = model_infer.query(variables=all_vars, evidence={})
     # print('MAP')
 
 

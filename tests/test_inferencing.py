@@ -4,7 +4,9 @@ import os
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
 from numpy.testing import assert_approx_equal
-from tests.conftest import LEC2_FILE, ROOT_DIR
+from examples import LEC2_FILE, USE_CASE_FILE
+from tests.conftest import ROOT_DIR
+
 import copy
 
 df_a = pd.DataFrame(
@@ -87,7 +89,7 @@ def test_marginal_dist__prior():
 
 
 def test_marginal_dist__hard():
-    """Test marginal dist behaves the same after newtork pruning!"""
+    """Test marginal dist behaves the same before and after network pruning!"""
     bif_file = os.path.join(ROOT_DIR, "experiments/dataset/random00.bifxml")
     assert os.path.isfile(bif_file)
     orig = BNReasoner(bif_file)
@@ -102,12 +104,24 @@ def test_marginal_dist__hard():
     )
 
     # try pruning first!!
-    for i in range(20):
-        print(f"\n***i = {i}")
+    for i in range(5):
         br = orig.deepcopy()
         br.network_pruning(Q, e)
         res = br.marginal_distribution(Q, e, ordering_method=Ordering.MIN_FILL)
         assert_frame_equal(res, expected)
+
+
+def test_marginal_dist__use_case():
+    br = BNReasoner(USE_CASE_FILE)
+    expected = br.bn.get_cpt("woman")
+
+    # 'woman' is a root node so its prior probability should just be its CPT
+    res = br.marginal_distribution(
+        {"woman"},
+        pd.Series({}),
+        ordering_method=Ordering.MIN_FILL,
+    )
+    assert_frame_equal(expected, res, check_dtype=False)
 
 
 def test_MPE():

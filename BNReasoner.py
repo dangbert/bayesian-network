@@ -4,6 +4,7 @@ import networkx as nx
 import pandas as pd
 from copy import deepcopy
 from enum import Enum
+import logging
 
 Evidence = pd.Series  # e.g.: pd.Series({"A": True, "B": False})
 
@@ -310,6 +311,7 @@ class BNReasoner:
         and return prior marginal.
         TODO: should be consistent about naming "method" vs "ordering_method" working.
         """
+        assert Q.issubset(set(self.bn.get_all_variables()))
         ordered = self.get_ordering(self._non_queried_variables(Q), method)
 
         all_cpts = list(self.bn.get_all_cpts().values())
@@ -332,6 +334,9 @@ class BNReasoner:
             if len(res.columns) == 2 and var in res.columns:
                 # this node is by itself (has 0 interactions so its irrelevant from the inference so delete it)
                 # ^it can't be summed out with marginalize()
+                logging.debug(
+                    f"throwing away table with columns f{list(res.columns)} that doesn't contain var '{var}'"
+                )
                 res = None
                 continue
 
@@ -360,6 +365,8 @@ class BNReasoner:
 
         :returns: dataframe containing P(not Q|e) and P(Q|e)
         """
+        assert Q.issubset(set(self.bn.get_all_variables()))
+        assert set(e.keys()).issubset(set(self.bn.get_all_variables()))
         br = self.deepcopy()  # create deep copy of self we can destructively edit
         # reduce all factors w.r.t. e
         br._apply_evidence(e, condition=True)
@@ -372,13 +379,7 @@ class BNReasoner:
         if not e.empty:
 
             # sum out C to get probability of e
-            try:
-                prob_e = marginal["p"].sum()
-            except TypeError as err:
-                import pdb
-
-                pdb.set_trace()
-                print(err)
+            prob_e = marginal["p"].sum()
             # "normalize" to obtain Pr(Q, e) (see "Posterior Marginal" slides)
             #   cause for Bayes theorem you have to divide by p(e)
             marginal["p"] = marginal["p"].div(prob_e)
@@ -395,6 +396,7 @@ class BNReasoner:
 
         :return a tuple containing a dictionary of assignments (for all variables in the network), and a probabilitity.
         """
+        assert set(e.keys()).issubset(set(self.bn.get_all_variables()))
         br = self.deepcopy()  # create deep copy of self we can destructively edit
 
         all_vars = set(br.bn.get_all_variables())
@@ -456,6 +458,8 @@ class BNReasoner:
         :param e: a series of assignments as tuples. E.g.: pd.Series({"A": True, "B": False})
         :param ordering_method: (optional) enum indicating which ordering method to use.
         """
+        assert Q.issubset(set(self.bn.get_all_variables()))
+        assert set(e.keys()).issubset(set(self.bn.get_all_variables()))
         br = self.deepcopy()  # create deep copy of self we can destructively edit
 
         # step 1: reduce w.r.t. e
