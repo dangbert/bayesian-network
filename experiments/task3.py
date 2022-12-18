@@ -111,14 +111,12 @@ def interesting_queries(ordering_method: Ordering, fname: str):
     print("\nprior probability of 'car-accident':")
     print(res)
 
-    """
     fact = model_infer.query(
         variables={"car-accident"},
         # variables={"car-accident"}, evidence={"under-25": True, "woman": False}
         evidence={},
     )
     print(f"\npgmpy response: {fact.variables}\n{fact.values}")
-    """
 
     latex += res.to_latex(index=False) + "\n"
 
