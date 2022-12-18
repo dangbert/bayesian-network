@@ -28,22 +28,23 @@ df_c = pd.DataFrame(
     }
 )
 
+BN_ABC = BayesNet()
+BN_ABC.create_bn(
+    ["A", "B", "C"],
+    [("A", "B"), ("B", "C")],
+    {
+        "A": copy.deepcopy(df_a),
+        "B": copy.deepcopy(df_b),
+        "C": copy.deepcopy(df_c),
+    },
+)
+
 
 def test_marginal_dist__posterior():
     """
     This test corresponds to slide 7-9 Lecture 4.
     """
-    bn = BayesNet()
-    bn.create_bn(
-        ["A", "B", "C"],
-        [("A", "B"), ("B", "C")],
-        {
-            "A": copy.deepcopy(df_a),
-            "B": copy.deepcopy(df_b),
-            "C": copy.deepcopy(df_c),
-        },
-    )
-    br = BNReasoner(bn)
+    br = BNReasoner(copy.deepcopy(BN_ABC))
     Q = {"C"}
     e = pd.Series({"A": True})
 
@@ -64,17 +65,6 @@ def test_marginal_dist__prior():
     (i.e. get "prior marginal" prob of B).
     See slides on "Variable Elimination"
     """
-    BN_ABC = BayesNet()
-    BN_ABC.create_bn(
-        ["A", "B", "C"],
-        [("A", "B"), ("B", "C")],
-        {
-            "A": copy.deepcopy(df_a),
-            "B": copy.deepcopy(df_b),
-            "C": copy.deepcopy(df_c),
-        },
-    )
-
     br = BNReasoner(copy.deepcopy(BN_ABC))
     res = br.marginal_distribution({"C"}, pd.Series({}))
     expected = pd.DataFrame(
@@ -167,18 +157,7 @@ def test_MAP():
 
 def test_variable_elim__simple():
     """Taken from slide 18 Lecture 3."""
-
-    bn = BayesNet()
-    bn.create_bn(
-        ["A", "B", "C"],
-        [("A", "B"), ("B", "C")],
-        {
-            "A": copy.deepcopy(df_a),
-            "B": copy.deepcopy(df_b),
-            "C": copy.deepcopy(df_c),
-        },
-    )
-    br = BNReasoner(bn)
+    br = BNReasoner(copy.deepcopy(BN_ABC))
     Q = {"C"}
     res = br.variable_elimination(Q)
 
