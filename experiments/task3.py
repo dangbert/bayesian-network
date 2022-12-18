@@ -65,19 +65,21 @@ def main():
     interesting_queries(Ordering.MIN_FILL, fname)
 
 
-# TODO: populate this function with all the interesting queries we care about
 def interesting_queries(ordering_method: Ordering, fname: str):
+    """Runs interesting queries on our use case network for part3 of assignment.
+
+    Note: if you want to be really careful, create a deep copy of br before each query.
+    (but the querying methods shouldn't modify br).
+    """
     br = BNReasoner(USE_CASE_FILE)
     all_vars = sorted(br.bn.get_all_variables())
+    # visualize(br, node_size=500)
 
     print(f"running some queries on: '{USE_CASE_FILE}'")
     print(f"NOTE: all variables:\n{all_vars}\n")
 
-    # note: if you want to be really careful, create a deep copy of br before each query
-    # but the querying methods shouldn't modify br)
-    # visualize(br, node_size=500)
-
     # https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html#Inference-in-Discrete-Bayesian-Network
+    # for checking our networks performance:
     model = XMLBIFReader(USE_CASE_FILE).get_model()
     from pgmpy.inference import VariableElimination
 
@@ -94,7 +96,7 @@ def interesting_queries(ordering_method: Ordering, fname: str):
             prob, res = res
             print(f"prob = {prob:0.4f}")
             print(res)
-            latex += f"{name}\n\nprob = {prob:0.4f}\n\\vfill\n{res.to_latex(index=True, float_format=float_format, header=header)}{NEWLINES}{NEWLINES}"
+            latex += f"{name}\n\nprobability = {prob:0.4f}\n\\vfill\n{res.to_latex(index=True, float_format=float_format, header=header)}{NEWLINES}{NEWLINES}"
         else:
             print(res)
             latex += f"{name}\n\\vfill\n{res.to_latex(index=False, float_format=float_format, header=header)}{NEWLINES}{NEWLINES}"
@@ -109,16 +111,23 @@ def interesting_queries(ordering_method: Ordering, fname: str):
     print("\nprior probability of 'car-accident':")
     print(res)
 
+    """
+    fact = model_infer.query(
+        variables={"car-accident"},
+        # variables={"car-accident"}, evidence={"under-25": True, "woman": False}
+        evidence={},
+    )
+    print(f"\npgmpy response: {fact.variables}\n{fact.values}")
+    """
+
     latex += res.to_latex(index=False) + "\n"
 
     res = br.deepcopy().marginal_distribution(
         {"car-accident"},
-        pd.Series({"under-25": True, "woman": True}),
+        pd.Series({"under-25": True, "woman": False}),
         ordering_method=ordering_method,
     )
-    name = (
-        "posterior probability of being in a car accident given under-25 and a woman:"
-    )
+    name = "posterior probability of being in a car accident given under-25 and a man:"
     process_result(name, res)
 
     res = br.deepcopy().MAP(

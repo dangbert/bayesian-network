@@ -4,19 +4,19 @@
 \toprule
  car-accident &        p \\
 \midrule
-        False & 0.881333 \\
-         True & 0.118667 \\
+        False & 0.916687 \\
+         True & 0.083313 \\
 \bottomrule
 \end{tabular}
 
-posterior probability of being in a car accident given under-25 and a woman:
+posterior probability of being in a car accident given under-25 and a man:
 \vfill
 \begin{tabular}{lr}
 \toprule
  car-accident &      p \\
 \midrule
-        False & 0.9006 \\
-         True & 0.0994 \\
+        False & 0.9376 \\
+         True & 0.0624 \\
 \bottomrule
 \end{tabular}
 
@@ -26,7 +26,7 @@ posterior probability of being in a car accident given under-25 and a woman:
 
 most likely state of the node 'bad-weather' given someone is in a car accident:
 
-prob = 0.0660
+probability = 0.0460
 \vfill
 \begin{tabular}{ll}
 \toprule
@@ -39,16 +39,16 @@ bad-weather &  True \\
 \vfill\vfill
 MPE of a car-accident:
 
-prob = 0.0096
+probability = 0.0108
 \vfill
 \begin{tabular}{ll}
 \toprule
-bad-weather         &  False \\
+bad-weather         &   True \\
 being-drunk         &  False \\
 car-accident        &   True \\
 decreased-alertness &  False \\
 distractions        &  False \\
-late                &  False \\
+on-time             &  False \\
 risky-driver        &  False \\
 under-25            &  False \\
 use-car             &   True \\

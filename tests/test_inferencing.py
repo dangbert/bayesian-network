@@ -111,6 +111,7 @@ def test_marginal_dist__hard():
         assert_frame_equal(res, expected)
 
 
+"""
 def test_marginal_dist__use_case():
     br = BNReasoner(USE_CASE_FILE)
     expected = br.bn.get_cpt("woman")
@@ -122,6 +123,7 @@ def test_marginal_dist__use_case():
         ordering_method=Ordering.MIN_FILL,
     )
     assert_frame_equal(expected, res, check_dtype=False)
+"""
 
 
 def test_MPE():
