@@ -485,7 +485,9 @@ class BNReasoner:
                 res = res.iloc[max_idx : (max_idx + 1)]
                 res = res.rename(columns={var: f"{INS}{var}"})
 
+        res = res.reset_index(drop=True)  # so we can read [0]
         p = res["p"][0]
+
         ins = {}
         remaining = set()
         for c in list(res.columns):

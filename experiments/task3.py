@@ -7,6 +7,7 @@ from enum import Enum
 import os
 from pgmpy.readwrite import XMLBIFReader
 import logging
+import warnings
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -57,24 +58,14 @@ def main():
     # br = BNReasoner(USE_CASE_FILE)
     # visualize(br, node_size=500)
 
+    # hide annyoying pandas deprecation warnings
+    warnings.filterwarnings("ignore")
+
     interesting_queries(Ordering.MIN_FILL)
 
 
 # TODO: populate this function with all the interesting queries we care about
 def interesting_queries(ordering_method: Ordering):
-    # all_vars = [
-    #    "bad-weather",
-    #    "being-drunk",
-    #    "car-accident",
-    #    "decreased-alertness",
-    #    "distractions",
-    #    "on-time",
-    #    "risky-driver",
-    #    "under-25",
-    #    "use-car",
-    #    "woman",
-    # ]
-
     br = BNReasoner(USE_CASE_FILE)
     all_vars = sorted(br.bn.get_all_variables())
 
@@ -89,40 +80,49 @@ def interesting_queries(ordering_method: Ordering):
     model = XMLBIFReader(USE_CASE_FILE).get_model()
     from pgmpy.inference import VariableElimination
 
+    latex = ""
+
     model_infer = VariableElimination(model)
 
     res = br.deepcopy().marginal_distribution(
-        {"woman"},
+        {"car-accident"},
         pd.Series({}),
         ordering_method=ordering_method,
     )
-    print("\nmarginal_dist query0:\n")
+    print("\nprior probability of 'car-accident':")
     print(res)
+
+    # res = br.deepcopy().marginal_distribution(
+    #    {"woman"},
+    #    pd.Series({}),
+    #    ordering_method=ordering_method,
+    # )
+    # print("\prior probability of 'woman':\n")
+    # print(res)
 
     # compare to result from pgmpy:
-    fact = model_infer.query(variables=["woman"], evidence={})
+    # fact = model_infer.query(variables=["woman"], evidence={})
+    # print("pgympy result:")
+    # print(fact.variables)
+    # print(fact.values)
 
-    print("pgympy result:")
-    print(fact.variables)
-    print(fact.values)
+    # res = br.deepcopy().marginal_distribution(
+    #    {"on-time", "woman"},
+    #    pd.Series({"bad-weather": True}),
+    #    ordering_method=ordering_method,
+    # )
+    # print("\nmarginal_dist query1:\n")
+    # print(res)
 
     res = br.deepcopy().marginal_distribution(
-        {"on-time", "woman"},
-        pd.Series({"bad-weather": True}),
+        {"car-accident"},
+        pd.Series({"under-25": True, "woman": True}),
         ordering_method=ordering_method,
     )
-    print("\nmarginal_dist query1:\n")
-    print(res)
-    import pdb
-
-    pdb.set_trace()
-
-    res = br.marginal_distribution(
-        {"on-time"},
-        pd.Series({"bad-weather": True}),
-        ordering_method=ordering_method,
+    print(
+        "\nposterior probability of being in a car accident given under-25 and a man:"
+        # "\nposterior probability of being in a car accident given a woman:"
     )
-    print("\nmarginal_dist query2:\n")
     print(res)
 
     # TODO: debug why this one also fails
@@ -142,19 +142,26 @@ def interesting_queries(ordering_method: Ordering):
     # print("\nMAP query2:\n")
     # print(res)
 
-    res = br.MPE(
+    res = br.deepcopy().MAP(
+        {"bad-weather"},
+        pd.Series({"car-accident": True}),
+        ordering_method=ordering_method,
+    )
+    print(
+        "\nmost likely state of the node bad weather given someone is in a car accident?:"
+    )
+    print(res)
+
+    res = br.deepcopy().MPE(
         pd.Series({"car-accident": True}),
         ordering_method=ordering_method,
     )
     print("\nMPE query:\n")
     print(res)
-    import pdb
-
-    pdb.set_trace()
 
     # res = br.MAP(set(all_vars), pd.Series({}))
     # fact = model_infer.query(variables=all_vars, evidence={})
-    # print('MAP')
+    # print("MAP")
 
 
 if __name__ == "__main__":
