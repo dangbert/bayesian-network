@@ -52,20 +52,21 @@ def main():
     log_level = logging.DEBUG
     logging.basicConfig(format=FORMAT, level=log_level)
 
-    fname = os.path.join(SCRIPT_DIR, "tables.tex")
+    # hide annyoying pandas deprecation warnings
+    warnings.filterwarnings("ignore")
+
+    fname = os.path.join(SCRIPT_DIR, "_tables.tex")
     cpt_latex(fname)
 
     # br = BNReasoner(USE_CASE_FILE)
     # visualize(br, node_size=500)
 
-    # hide annyoying pandas deprecation warnings
-    warnings.filterwarnings("ignore")
-
-    interesting_queries(Ordering.MIN_FILL)
+    fname = os.path.join(SCRIPT_DIR, "_part3.tex")
+    interesting_queries(Ordering.MIN_FILL, fname)
 
 
 # TODO: populate this function with all the interesting queries we care about
-def interesting_queries(ordering_method: Ordering):
+def interesting_queries(ordering_method: Ordering, fname: str):
     br = BNReasoner(USE_CASE_FILE)
     all_vars = sorted(br.bn.get_all_variables())
 
@@ -80,7 +81,23 @@ def interesting_queries(ordering_method: Ordering):
     model = XMLBIFReader(USE_CASE_FILE).get_model()
     from pgmpy.inference import VariableElimination
 
-    latex = ""
+    float_format = "{:0.4f}".format
+    NEWLINES = "\n\\vfill\\vfill\n"
+    latex = NEWLINES
+
+    def process_result(name: str, res, header: bool = True):
+        nonlocal latex
+        nonlocal float_format
+
+        print(f"\n{name}")
+        if type(res) == tuple:
+            prob, res = res
+            print(f"prob = {prob:0.4f}")
+            print(res)
+            latex += f"{name}\n\nprob = {prob:0.4f}\n\\vfill\n{res.to_latex(index=True, float_format=float_format, header=header)}{NEWLINES}{NEWLINES}"
+        else:
+            print(res)
+            latex += f"{name}\n\\vfill\n{res.to_latex(index=False, float_format=float_format, header=header)}{NEWLINES}{NEWLINES}"
 
     model_infer = VariableElimination(model)
 
@@ -91,6 +108,37 @@ def interesting_queries(ordering_method: Ordering):
     )
     print("\nprior probability of 'car-accident':")
     print(res)
+
+    latex += res.to_latex(index=False) + "\n"
+
+    res = br.deepcopy().marginal_distribution(
+        {"car-accident"},
+        pd.Series({"under-25": True, "woman": True}),
+        ordering_method=ordering_method,
+    )
+    name = (
+        "posterior probability of being in a car accident given under-25 and a woman:"
+    )
+    process_result(name, res)
+
+    res = br.deepcopy().MAP(
+        {"bad-weather"},
+        pd.Series({"car-accident": True}),
+        ordering_method=ordering_method,
+    )
+    name = "\nmost likely state of the node 'bad-weather' given someone is in a car accident:"
+    process_result(name, res, header=False)
+
+    res = br.deepcopy().MPE(
+        pd.Series({"car-accident": True}),
+        ordering_method=ordering_method,
+    )
+    name = "MPE of a car-accident:"
+    process_result(name, res, header=False)
+
+    # res = br.MAP(set(all_vars), pd.Series({}))
+    # fact = model_infer.query(variables=all_vars, evidence={})
+    # print("MAP")
 
     # res = br.deepcopy().marginal_distribution(
     #    {"woman"},
@@ -114,17 +162,6 @@ def interesting_queries(ordering_method: Ordering):
     # print("\nmarginal_dist query1:\n")
     # print(res)
 
-    res = br.deepcopy().marginal_distribution(
-        {"car-accident"},
-        pd.Series({"under-25": True, "woman": True}),
-        ordering_method=ordering_method,
-    )
-    print(
-        "\nposterior probability of being in a car accident given under-25 and a man:"
-        # "\nposterior probability of being in a car accident given a woman:"
-    )
-    print(res)
-
     # TODO: debug why this one also fails
     # res = br.MAP(
     #    {"woman", "being-drunk"},
@@ -142,26 +179,9 @@ def interesting_queries(ordering_method: Ordering):
     # print("\nMAP query2:\n")
     # print(res)
 
-    res = br.deepcopy().MAP(
-        {"bad-weather"},
-        pd.Series({"car-accident": True}),
-        ordering_method=ordering_method,
-    )
-    print(
-        "\nmost likely state of the node bad weather given someone is in a car accident?:"
-    )
-    print(res)
-
-    res = br.deepcopy().MPE(
-        pd.Series({"car-accident": True}),
-        ordering_method=ordering_method,
-    )
-    print("\nMPE query:\n")
-    print(res)
-
-    # res = br.MAP(set(all_vars), pd.Series({}))
-    # fact = model_infer.query(variables=all_vars, evidence={})
-    # print("MAP")
+    with open(fname, "w") as f:
+        f.write(latex)
+    print(f"\nwrote file: '{fname}'")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,228 @@
+% under-25
+
+CPT for Node 'under-25':
+
+\begin{tabular}{lr}
+\toprule
+ under-25 &    p \\
+\midrule
+    False & 0.65 \\
+     True & 0.35 \\
+\bottomrule
+\end{tabular}
+
+% woman
+
+CPT for Node 'woman':
+
+\begin{tabular}{lr}
+\toprule
+ woman &   p \\
+\midrule
+ False & 0.5 \\
+  True & 0.5 \\
+\bottomrule
+\end{tabular}
+
+% bad-weather
+
+CPT for Node 'bad-weather':
+
+\begin{tabular}{lr}
+\toprule
+ bad-weather &    p \\
+\midrule
+       False & 0.48 \\
+        True & 0.52 \\
+\bottomrule
+\end{tabular}
+
+% being-drunk
+
+CPT for Node 'being-drunk':
+
+\begin{tabular}{lllr}
+\toprule
+ under-25 &  woman &  being-drunk &    p \\
+\midrule
+    False &  False &        False & 0.94 \\
+    False &  False &         True & 0.06 \\
+    False &   True &        False & 0.90 \\
+    False &   True &         True & 0.10 \\
+     True &  False &        False & 0.96 \\
+     True &  False &         True & 0.04 \\
+     True &   True &        False & 0.93 \\
+     True &   True &         True & 0.07 \\
+\bottomrule
+\end{tabular}
+
+% risky-driver
+
+CPT for Node 'risky-driver':
+
+\begin{tabular}{lllr}
+\toprule
+ woman &  under-25 &  risky-driver &    p \\
+\midrule
+ False &     False &         False & 0.90 \\
+ False &     False &          True & 0.10 \\
+ False &      True &         False & 0.95 \\
+ False &      True &          True & 0.05 \\
+  True &     False &         False & 0.80 \\
+  True &     False &          True & 0.20 \\
+  True &      True &         False & 0.85 \\
+  True &      True &          True & 0.15 \\
+\bottomrule
+\end{tabular}
+
+% distractions
+
+CPT for Node 'distractions':
+
+\begin{tabular}{lllr}
+\toprule
+ woman &  under-25 &  distractions &    p \\
+\midrule
+ False &     False &         False & 0.85 \\
+ False &     False &          True & 0.15 \\
+ False &      True &         False & 0.80 \\
+ False &      True &          True & 0.20 \\
+  True &     False &         False & 0.65 \\
+  True &     False &          True & 0.35 \\
+  True &      True &         False & 0.60 \\
+  True &      True &          True & 0.40 \\
+\bottomrule
+\end{tabular}
+
+% use-car
+
+CPT for Node 'use-car':
+
+\begin{tabular}{llllr}
+\toprule
+ woman &  under-25 &  bad-weather &  use-car &   p \\
+\midrule
+ False &     False &        False &    False & 0.6 \\
+ False &     False &        False &     True & 0.4 \\
+ False &     False &         True &    False & 0.5 \\
+ False &     False &         True &     True & 0.5 \\
+ False &      True &        False &    False & 0.8 \\
+ False &      True &        False &     True & 0.2 \\
+ False &      True &         True &    False & 0.7 \\
+ False &      True &         True &     True & 0.3 \\
+  True &     False &        False &    False & 0.5 \\
+  True &     False &        False &     True & 0.5 \\
+  True &     False &         True &    False & 0.4 \\
+  True &     False &         True &     True & 0.6 \\
+  True &      True &        False &    False & 0.7 \\
+  True &      True &        False &     True & 0.3 \\
+  True &      True &         True &    False & 0.6 \\
+  True &      True &         True &     True & 0.4 \\
+\bottomrule
+\end{tabular}
+
+% decreased-alertness
+
+CPT for Node 'decreased-alertness':
+
+\begin{tabular}{lllr}
+\toprule
+ bad-weather &  distractions &  decreased-alertness &    p \\
+\midrule
+       False &         False &                False & 0.99 \\
+       False &         False &                 True & 0.01 \\
+       False &          True &                False & 0.90 \\
+       False &          True &                 True & 0.10 \\
+        True &         False &                False & 0.85 \\
+        True &         False &                 True & 0.15 \\
+        True &          True &                False & 0.75 \\
+        True &          True &                 True & 0.25 \\
+\bottomrule
+\end{tabular}
+
+% late
+
+CPT for Node 'late':
+
+\begin{tabular}{lllllr}
+\toprule
+ car-accident &  risky-driver &  bad-weather &  being-drunk &  late &      p \\
+\midrule
+        False &         False &        False &        False & False & 0.7500 \\
+        False &         False &        False &        False &  True & 0.2500 \\
+        False &         False &        False &         True & False & 0.7800 \\
+        False &         False &        False &         True &  True & 0.2200 \\
+        False &         False &         True &        False & False & 0.5000 \\
+        False &         False &         True &        False &  True & 0.5000 \\
+        False &         False &         True &         True & False & 0.6000 \\
+        False &         False &         True &         True &  True & 0.4000 \\
+        False &          True &        False &        False & False & 0.9997 \\
+        False &          True &        False &        False &  True & 0.0003 \\
+        False &          True &        False &         True & False & 0.9998 \\
+        False &          True &        False &         True &  True & 0.0002 \\
+        False &          True &         True &        False & False & 0.9999 \\
+        False &          True &         True &        False &  True & 0.0001 \\
+        False &          True &         True &         True & False & 1.0000 \\
+        False &          True &         True &         True &  True & 0.0000 \\
+         True &         False &        False &        False & False & 0.7200 \\
+         True &         False &        False &        False &  True & 0.2800 \\
+         True &         False &        False &         True & False & 0.7500 \\
+         True &         False &        False &         True &  True & 0.2500 \\
+         True &         False &         True &        False & False & 0.4700 \\
+         True &         False &         True &        False &  True & 0.5300 \\
+         True &         False &         True &         True & False & 0.6700 \\
+         True &         False &         True &         True &  True & 0.3300 \\
+         True &          True &        False &        False & False & 0.9997 \\
+         True &          True &        False &        False &  True & 0.0003 \\
+         True &          True &        False &         True & False & 0.9998 \\
+         True &          True &        False &         True &  True & 0.0002 \\
+         True &          True &         True &        False & False & 0.9999 \\
+         True &          True &         True &        False &  True & 0.0001 \\
+         True &          True &         True &         True & False & 1.0000 \\
+         True &          True &         True &         True &  True & 0.0000 \\
+\bottomrule
+\end{tabular}
+
+% car-accident
+
+CPT for Node 'car-accident':
+
+\begin{tabular}{lllllr}
+\toprule
+ being-drunk &  risky-driver &  decreased-alertness &  use-car &  car-accident &     p \\
+\midrule
+       False &         False &                False &    False &         False & 0.995 \\
+       False &         False &                False &    False &          True & 0.005 \\
+       False &         False &                False &     True &         False & 0.700 \\
+       False &         False &                False &     True &          True & 0.300 \\
+       False &         False &                 True &    False &         False & 0.970 \\
+       False &         False &                 True &    False &          True & 0.030 \\
+       False &         False &                 True &     True &         False & 0.900 \\
+       False &         False &                 True &     True &          True & 0.100 \\
+       False &          True &                False &    False &         False & 0.950 \\
+       False &          True &                False &    False &          True & 0.050 \\
+       False &          True &                False &     True &         False & 0.830 \\
+       False &          True &                False &     True &          True & 0.170 \\
+       False &          True &                 True &    False &         False & 0.930 \\
+       False &          True &                 True &    False &          True & 0.070 \\
+       False &          True &                 True &     True &         False & 0.800 \\
+       False &          True &                 True &     True &          True & 0.200 \\
+        True &         False &                False &    False &         False & 0.990 \\
+        True &         False &                False &    False &          True & 0.010 \\
+        True &         False &                False &     True &         False & 0.850 \\
+        True &         False &                False &     True &          True & 0.150 \\
+        True &         False &                 True &    False &         False & 0.950 \\
+        True &         False &                 True &    False &          True & 0.050 \\
+        True &         False &                 True &     True &         False & 0.800 \\
+        True &         False &                 True &     True &          True & 0.200 \\
+        True &          True &                False &    False &         False & 0.900 \\
+        True &          True &                False &    False &          True & 0.100 \\
+        True &          True &                False &     True &         False & 0.650 \\
+        True &          True &                False &     True &          True & 0.350 \\
+        True &          True &                 True &    False &         False & 0.850 \\
+        True &          True &                 True &    False &          True & 0.150 \\
+        True &          True &                 True &     True &         False & 0.600 \\
+        True &          True &                 True &     True &          True & 0.400 \\
+\bottomrule
+\end{tabular}
+
